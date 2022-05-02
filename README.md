@@ -98,9 +98,9 @@ An example schema:
         { "properties": ["email", "name", "phone"], "fulltext": true }
     ],
     "constraints": [
-        { "name": "age", "check": "age > 10", comment: "Age must be greater than 10" },
-        { "name": "email", "check": "email IS NULL OR email RLIKE '^[^@]+@[^@]+[.][^@]{2,}$'", comment: "Basic regex for email validation" },
-        { "name": "phone", "check": "phone IS NULL OR phone RLIKE '^[0-9]{8,16}$'", comment: "A phone should consist of ONLY numbers" }
+        { "name": "age", "check": "age > 10" },
+        { "name": "email", "check": "email IS NULL OR email RLIKE '^[^@]+@[^@]+[.][^@]{2,}$'" },
+        { "name": "phone", "check": "phone IS NULL OR phone RLIKE '^[0-9]{8,16}$'" }
     ]
 }
 ```
