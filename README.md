@@ -6,29 +6,17 @@ DBX is a simple, [Deno](https://deno.land/)-specific, minimalist library for acc
 coming in the future). After years of working with Loopback, Knex, TypeORM and a short stop on DenoDB
 I decided that things could be made simpler (yes, I [know how standards proliferate](https://imgs.xkcd.com/comics/standards.png), sigh).
 
-It currently supports [MariaDB](https://mariadb.org/), [MySQL](https://www.mysql.com/), [PostgreSQL](https://www.postgresql.org/) and [SQLite](https://www.sqlite.org/index.html).
 
 
 ## Tenets:
 
 - Everything should be as simple as possible (but not simpler)**<sup>✻</sup>**
-- Provide a thin layer on top of SQL to perform (I assume 80%) of common cases
-- Let the user write SQL for the rest of the cases
-- Use existing standards for describing schemas (such as [JSON schema](https://json-schema.org))) instead of inventing yet another standard (looking at you Prisma)
+- Provide a thin layer on top of SQL to support common cases (80%), and SQL for the complex rest (20%)
+- Use existing standards for describing schemas (such as [JSON schema](https://json-schema.org))) instead of inventing another (looking at you Prisma)
 - Make good use of "newish" (or at least newly implemented in MYSQL) DB features such as constraint checks
-- Prefer [DataMapper](https://typeorm.io/active-record-data-mapper#what-is-the-data-mapper-pattern) instead of [ActiveRecord](https://typeorm.io/active-record-data-mapper#what-is-the-active-record-pattern) ("leave my classes alone")
-- Relations are best left to the DBMS
+- Prefer [DataMapper](https://typeorm.io/active-record-data-mapper#what-is-the-data-mapper-pattern) to [ActiveRecord](https://typeorm.io/active-record-data-mapper#what-is-the-active-record-pattern) ("leave my classes alone")
 
 **✻** Shamelessly appropriated, no longer know from [whom](https://quoteinvestigator.com/2011/05/13/einstein-simple/).
-
-
-## Other objectives
-
-- Use types to catch column typos and query mistakes
-- Minimize syntax proliferation (if a `not`/`gt`/`lt` symbol is possible, do not make the user import [`Not`/`GreaterThan`/`LessThan`](https://typeorm.io/find-options#advanced-options) objects)
-- Be as performant as possible, minimal overhead (dubious claim in ORM where 99% of time spent is in the DBMS round trip)
-- Stay away from annotations (for as long as possible)
-- Minimize dependencies
 
 
 ## Uses
@@ -161,6 +149,19 @@ repo.on("after-insert", function () {
     console.log(`Since server start, we have ${++counter} new users!)
 });
 ```
+
+
+## Other objectives
+
+These objectives did not classify as tenets ...
+
+- Support [MariaDB](https://mariadb.org/), [MySQL](https://www.mysql.com/), [PostgreSQL](https://www.postgresql.org/) and [SQLite](https://www.sqlite.org/index.html).
+- Use types to catch column typos and query mistakes
+- Minimize syntax proliferation (if a `not`/`gt`/`lt` symbol is possible, do not make the user import [`Not`/`GreaterThan`/`LessThan`](https://typeorm.io/find-options#advanced-options) objects)
+- Be as performant as possible, minimal overhead (dubious claim in ORM where 99% of time spent is in the DBMS round trip)
+- Stay away from annotations (for as long as possible)
+- Minimize dependencies
+
 
 ## Testing
 
