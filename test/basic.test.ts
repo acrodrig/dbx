@@ -18,11 +18,6 @@ let id = -1;
 
 const repo = await DB.getRepository(AccountModel);
 
-// test("DB should be empty", options, async function() {
-//     const accounts = await repo.find({ where: { name: NAME } });
-//     assert.equal(accounts.length, 0);
-// });
-
 test("Basic entity store/retrieve", options, async function() {
     let account = new AccountModel({ name: NAME });
 
@@ -63,7 +58,7 @@ test("Full Text search", options, async function() {
 });
 
 test("Query with raw SQL", options, async function() {
-    const accounts = await repo.find({ where: { or: [ { name: "XYZ" }, { $sql: "(id BETWEEN -1000 AND 1000)" }] } }, true);
+    const accounts = await repo.find({ where: { or: [ { name: "XYZ" }, { $sql: "(id BETWEEN -1000 AND 1000)" }] } });
     assert.equal(accounts.length, 1);
 });
 
@@ -76,7 +71,7 @@ test("Find by ID and update", options, async function() {
 
     // Updated account has the right values
     account.comments = comments;
-    account = await repo.update(account) as AccountModel;
+    account = await repo.update(account, true) as AccountModel;
     assert.equal(account.id, id);
     assert.equal(account.comments, comments);
 

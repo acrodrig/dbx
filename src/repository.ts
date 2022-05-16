@@ -43,7 +43,6 @@ const emitters = new Map<Class<unknown>, EventEmitter>();
 
 // Loopback like model
 export class Repository<T extends Identifiable> {
-    meta = false;
     table: string;
     type: Class<T>;
     schema?: Schema;
@@ -83,7 +82,7 @@ export class Repository<T extends Identifiable> {
 
         // Delete restricted to WHERE clause
         const whereTree: Primitive[] = [];
-        const sql = `DELETE FROM ${this.table} WHERE ${Repository._where({ ...where, ...this.baseWhere }, whereTree, this.meta)}`;
+        const sql = `DELETE FROM ${this.table} WHERE ${Repository._where({ ...where, ...this.baseWhere }, whereTree)}`;
         const parameters = whereTree;
         logger.debug({ method: "delete", sql: clean(sql), parameters });
         if (debug) console.debug({ method: "delete", sql: clean(sql), parameters });
@@ -126,14 +125,13 @@ export class Repository<T extends Identifiable> {
         const sql = `
             SELECT ${select.length ? join("??", select.length) : "*"}
             FROM ${this.table}
-            WHERE ${Repository._where({ ...where, ...this.baseWhere }, whereTree, this.meta, fullTextColumns)}
-            ORDER BY ${Repository._order(filter.order, this.meta) || "NULL"}
+            WHERE ${Repository._where({ ...where, ...this.baseWhere }, whereTree, fullTextColumns)}
+            ORDER BY ${Repository._order(filter.order) || "NULL"}
             LIMIT ? OFFSET ?
         `;
 
         // Build parameters
-        const order = this.meta ? Object.keys(filter.order ?? {}) : [];
-        const parameters = [...select, ...whereTree, ...order, limit, offset];
+        const parameters = [...select, ...whereTree, limit, offset];
 
         logger.debug({ method: "find", sql: clean(sql), parameters });
         if (debug) console.debug({ method: "find", sql: clean(sql), parameters });
@@ -167,9 +165,9 @@ export class Repository<T extends Identifiable> {
     async insert(object: T, debug = false): Promise<T> {
         const record = this.toRecord(object);
         const names = Object.keys(record), values = Object.values(record);
-        const columns = this.meta ? join("??",names.length) : names.map(name => ""+CQ+name+CQ+"").join(",");
+        const columns = names.map(name => ""+CQ+name+CQ+"").join(",");
         const sql = `INSERT INTO ${this.table} (${columns}) VALUES (${join("?",names.length)})${DB.type === "postgres" ? " RETURNING id" : ""}`;
-        const parameters = this.meta ? [...names, ...values] : [...values];
+        const parameters = [...values];
         logger.debug({ method: "insert", sql: clean(sql), parameters });
         if (debug) console.debug({ method: "insert", sql: clean(sql), parameters });
         await this.emitter.emit(Hook.BEFORE_INSERT, this, object);
@@ -183,10 +181,9 @@ export class Repository<T extends Identifiable> {
     async update(object: Partial<T>, debug = false): Promise<T|undefined> {
         const record = this.toRecord(object);
         const whereTree: Primitive[] = [];
-        const entries = Object.entries(record);
-        const columns = this.meta ? join("??=?",entries.length) : Object.keys(record).map(name => ""+CQ+name+CQ+"=?").join(",");
+        const columns = Object.keys(record).map(name => ""+CQ+name+CQ+"=?").join(",");
         const sql = `UPDATE ${this.table} SET ${columns} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
-        const parameters = [...(this.meta ? entries.flat() : Object.values(record)), object.id, ...whereTree];
+        const parameters = [...Object.values(record), object.id, ...whereTree];
         logger.debug({ method: "update", sql: clean(sql), parameters });
         if (debug) console.debug({ method: "update", sql: clean(sql), parameters });
         await this.emitter.emit(Hook.BEFORE_UPDATE, this, object);
@@ -234,19 +231,19 @@ export class Repository<T extends Identifiable> {
     }
 
     // Meta specifies that it will use ?? as literal parameter for the SQL query (valid in MySQL)
-    static _where<T>(where?: Where<T>, tree: Primitive[] = [], meta = false, fullTextColumns?: string[]): string {
+    static _where<T>(where?: Where<T>, tree: Primitive[] = [], fullTextColumns?: string[]): string {
         const entries = Object.entries(where ?? {});
         const expressions = [];
         for (const [name, value] of entries) {
             const st: Primitive[] = [], ses = [];
             if (name === "and") {
-                for (const w of value) ses.push(Repository._where(w, st, meta, fullTextColumns));
+                for (const w of value) ses.push(Repository._where(w, st, fullTextColumns));
                 tree.push(...st);
                 expressions.push("(" + ses.join(" AND ") + ")");
                 break;
             }
             if (name === "or") {
-                for (const w of value) ses.push(Repository._where(w, st, meta, fullTextColumns));
+                for (const w of value) ses.push(Repository._where(w, st, fullTextColumns));
                 tree.push(...st);
                 expressions.push("(" + ses.join(" OR ") + ")");
                 break;
@@ -254,9 +251,8 @@ export class Repository<T extends Identifiable> {
 
             // Predicate
             const keys = Object.keys(value || {}), key = keys.pop()!;
-            const column = (meta ? "??" : CQ+name+CQ);
+            const column = CQ+name+CQ;
             let op = operators[key as keyof typeof operators];
-            if (meta && op !== "MATCH" && column !== "$sql") tree.push(name);
 
             // Special case for FULLTEXT (if the matching value is NOT truthy we skip)
             if (op === "MATCH") {
@@ -293,10 +289,10 @@ export class Repository<T extends Identifiable> {
         return expressions.join(" AND ") || "TRUE";
     }
 
-    static _order<T>(order?: Order<T>, meta = false): string {
+    static _order<T>(order?: Order<T>): string {
         const expressions = [];
         for (const [name,value] of Object.entries(order ?? {})) {
-            expressions.push((meta ? "??" : name)+(value === " DESC" ? " DESC" : " ASC"));
+            expressions.push(name+(value === " DESC" ? " DESC" : " ASC"));
         }
         return expressions.join(",");
     }

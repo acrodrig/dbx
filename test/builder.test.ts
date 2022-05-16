@@ -5,21 +5,12 @@ import DB from "../src/db.ts";
 
 const test = Deno.test;
 
-test("Test _where (with META ?? placeholder)", function () {
-    const where = Repository._where, now = new Date(), meta = true;
-    let tree: unknown[];
-    assert.equal(where({ a: 1, b: 2 }, tree = [], meta), "?? = ? AND ?? = ?");
-    assert.deepEqual(tree, ["a", 1, "b", 2]);
-    assert.equal(where({ a: null, c: { gt: 3 }, or: [{ x: "X" }, { d: { lte: now }}] }, tree = [], meta), "?? IS ? AND ?? > ? AND (?? = ? OR ?? <= ?)");
-    assert.deepEqual(tree, ["a", null, "c", 3, "x", "X", "d",now]);
-});
-
 test("Test _where (with NO META ??)", function () {
-    const where = Repository._where, now = new Date(), meta = false;
+    const where = Repository._where, now = new Date();
     let tree: unknown[];
-    assert.equal(where({ a: 1, b: 2 }, tree = [], meta), "a = ? AND b = ?");
+    assert.equal(where({ a: 1, b: 2 }, tree = []), "a = ? AND b = ?");
     assert.deepEqual(tree, [1, 2]);
-    assert.equal(where({ a: null, c: { gt: 3 }, or: [{ x: "X" }, { d: { lte: now }}] }, tree = [], meta), "a IS ? AND c > ? AND (x = ? OR d <= ?)");
+    assert.equal(where({ a: null, c: { gt: 3 }, or: [{ x: "X" }, { d: { lte: now }}] }, tree = []), "a IS ? AND c > ? AND (x = ? OR d <= ?)");
     assert.deepEqual(tree, [null, 3, "X", now]);
 });
 
