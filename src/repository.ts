@@ -199,7 +199,7 @@ export class Repository<T extends Identifiable> {
         // const isObject = (o) return object && (object as any).constructor === Object;
         names.forEach(n => {
             const column = columns?.[n];
-            if (column && (column.readOnly || column.asExpression)) return;
+            if (column && (column.readOnly || column.asExpression || column.dateOn)) return;
             const type = column?.type;
             const value = object[n as keyof typeof object];
             if (typeof(value) === "undefined") return;
