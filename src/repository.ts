@@ -292,7 +292,7 @@ export class Repository<T extends Identifiable> {
     static _order<T>(order?: Order<T>): string {
         const expressions = [];
         for (const [name,value] of Object.entries(order ?? {})) {
-            expressions.push(name+(value === " DESC" ? " DESC" : " ASC"));
+            expressions.push(name+(value === "DESC" ? " DESC" : " ASC"));
         }
         return expressions.join(",");
     }
