@@ -180,6 +180,7 @@ export class Repository<T extends Identifiable> {
     // https://dev.mysql.com/doc/refman/8.0/en/update.html
     async update(object: Partial<T>, debug = false): Promise<T|undefined> {
         const record = this.toRecord(object);
+        delete record.id;
         const whereTree: Primitive[] = [];
         const columns = Object.keys(record).map(name => ""+CQ+name+CQ+"=?").join(",");
         const sql = `UPDATE ${this.table} SET ${columns} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
@@ -196,7 +197,6 @@ export class Repository<T extends Identifiable> {
     toRecord(object: Partial<T>, record: Record<string,unknown> = {}): Record<string,unknown> {
         const columns = this.schema?.properties;
         const names = Object.keys(columns ?? object);
-        // const isObject = (o) return object && (object as any).constructor === Object;
         names.forEach(n => {
             const column = columns?.[n];
             if (column && (column.readOnly || column.asExpression || column.dateOn)) return;
