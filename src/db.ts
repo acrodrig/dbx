@@ -1,11 +1,11 @@
 import { getLogger } from "./deps.ts";
-import { Class, Identifiable, Primitive, Row, Schema } from "./types.ts";
+import { Class, Identifiable, Parameter, Primitive, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
 import { DDL } from "./ddl.ts";
 
 // See https://github.com/eveningkid/denodb/blob/master/deps.ts
 import { Client as MySQLClient, configLogger } from "https://deno.land/x/mysql@v2.10.2/mod.ts";
-import { DB as SQLiteClient } from "https://deno.land/x/sqlite@v3.3.0/mod.ts";
+import { DB as SQLiteClient, QueryParameterSet } from "https://deno.land/x/sqlite@v3.3.0/mod.ts";
 import { Pool as PostgresClient } from "https://deno.land/x/postgres@v0.15.0/mod.ts";
 
 
@@ -28,8 +28,8 @@ const Hook = {
 export interface Client {
     type: string;
     close(): Promise<void>;
-    execute(sql: string, parameters?: Primitive[]): Promise<{ affectedRows?: number, lastInsertId?: number }>;
-    query(sql: string, parameters?: Primitive[]): Promise<Row[]>;
+    execute(sql: string, parameters?: Parameter[]): Promise<{ affectedRows?: number, lastInsertId?: number }>;
+    query(sql: string, parameters?: Parameter[]): Promise<Row[]>;
 }
 
 export interface ClientConfig {
@@ -58,10 +58,10 @@ async function connect(config: ClientConfig): Promise<Client> {
             close() {
                 return nativeClient.close();
             }
-            execute(sql: string, parameters?: Primitive[]) {
+            execute(sql: string, parameters?: Parameter[]) {
                 return nativeClient.execute(sql, parameters);
             }
-            query(sql: string, parameters?: Primitive[]) {
+            query(sql: string, parameters?: Parameter[]) {
                 return nativeClient.query(sql, parameters);
             }
         }
@@ -74,11 +74,11 @@ async function connect(config: ClientConfig): Promise<Client> {
             close() {
                 return Promise.resolve();
             }
-            async execute(sql: string, parameters?: Primitive[]) {
+            async execute(sql: string, parameters?: Parameter[]) {
                 const qar = await nativeClient.queryArray(sql, parameters);
                 return { affectedRows: qar.rowCount, lastInsertId: qar.rows[0]?.[0] as number ?? undefined };
             }
-            async query(sql: string, parameters?: Primitive[]) {
+            async query(sql: string, parameters?: Parameter[]) {
                 const qor = await nativeClient.queryObject(sql, parameters);
                 return qor.rows as Row[];
             }
@@ -92,12 +92,12 @@ async function connect(config: ClientConfig): Promise<Client> {
                 nativeClient.close();
                 return Promise.resolve();
             }
-            execute(sql: string, parameters?: Primitive[]) {
-                nativeClient.query(sql, parameters);
+            execute(sql: string, parameters?: Parameter[]) {
+                nativeClient.query(sql, parameters as QueryParameterSet);
                 return Promise.resolve({ affectedRows: nativeClient.changes, lastInsertId: nativeClient.lastInsertRowId });
             }
-            query(sql: string, parameters?: Primitive[]) {
-                return Promise.resolve(nativeClient.queryEntries(sql, parameters));
+            query(sql: string, parameters?: Parameter[]) {
+                return Promise.resolve(nativeClient.queryEntries(sql, parameters as QueryParameterSet));
             }
         }
     }
@@ -124,6 +124,7 @@ export class DB {
         await this.client.close();
     }
 
+    // Transforms parameters (and SQL) into array-like and references via `?`
     static _transformParameters(sql: string, objectParameters: { [key: string]: unknown }, arrayParameters: unknown[]): string {
         arrayParameters.splice(0, arrayParameters.length);
         return sql.replace(/[:][$A-Z_][0-9A-Z_$]*/ig, function(name) {
@@ -139,9 +140,9 @@ export class DB {
         return sql;
     }
 
-    static query(sql: string, parameters?: Primitive[] | { [key: string]: Primitive }, debug = false): Promise<Row[]> {
+    static query(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug = false): Promise<Row[]> {
         // If values are not an array, they need to be transformed (as well as the SQL)
-        const arrayParameters: Primitive[] = [];
+        const arrayParameters: Parameter[] = [];
         if (parameters && !Array.isArray(parameters)) {
             sql = DB._transformParameters(sql, parameters, arrayParameters);
             parameters = arrayParameters;
@@ -155,9 +156,9 @@ export class DB {
         return DB.client.query(sql, parameters);
     }
 
-    static execute(sql: string, parameters?: Primitive[] | { [key: string]: Primitive }, debug = false) {
+    static execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug = false) {
         // If values are not an array, they need to be transformed (as well as the SQL)
-        const arrayParameters: Primitive[] = [];
+        const arrayParameters: Parameter[] = [];
         if (parameters && !Array.isArray(parameters)) {
             sql = DB._transformParameters(sql, parameters, arrayParameters);
             parameters = arrayParameters;

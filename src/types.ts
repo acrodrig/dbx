@@ -1,5 +1,6 @@
 // Copied from base util.ts which are copied from type-fest
 export type Primitive = bigint | boolean | Date | null | number | string | Uint8Array | undefined;
+export type Parameter = Primitive | bigint[] | boolean[] | Date[] | number[] | string[];
 
 export type Class<T> = { new(): T };
 export type Row = { [key in string]?: unknown; }
