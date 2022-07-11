@@ -1,5 +1,5 @@
 import { getLogger } from "./deps.ts";
-import { Class, Identifiable, Parameter, Primitive, Row, Schema } from "./types.ts";
+import { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
 import { DDL } from "./ddl.ts";
 
@@ -85,7 +85,7 @@ async function connect(config: ClientConfig): Promise<Client> {
         }
     }
     if (config.type === "sqlite") {
-        const nativeClient = new SQLiteClient(config.database ?? ":memory:");
+        const nativeClient = new SQLiteClient(config.database ?? Deno.env.get("DB_FILE") ?? ":memory:");
         return new class implements Client {
             type = "sqlite";
             close() {

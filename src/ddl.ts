@@ -15,13 +15,18 @@ export class DDL {
     static padWidth = 4;
     static defaultWidth = 256;
 
+    // Light compatibility layer!
+    static defaultExpressionFilter(sql: string, type: string): string | undefined {
+        return sql;
+    }
+
     // Uses the most standard MySQL syntax and then it is fixed afterwards
-    static createTable(schema: Schema, type = "mysql", nameOverride?: string): string {
+    static createTable(schema: Schema, dbType = "mysql", nameOverride?: string, expressionFilter = DDL.defaultExpressionFilter): string {
         // Get name padding
         const namePad = Math.max(...Object.keys(schema.properties).map(n => n.length || 0)) + 1;
 
         // Check with if type is SQLite since it is the most restrictive
-        const sqlite = (type === "sqlite"), postgres = (type === "postgres"), other = sqlite || postgres;
+        const sqlite = (dbType === "sqlite"), postgres = (dbType === "postgres"), other = sqlite || postgres;
 
         // Column generator
         const createColumn =  function(name: string, column: Column, padWidth = DDL.padWidth, defaultWidth = DDL.defaultWidth): string {
@@ -34,7 +39,8 @@ export class DDL {
             const length = type.endsWith("CHAR") ? "("+(column.maxLength || defaultWidth)+")" : "";
             const nullable = column.primaryKey || column.required ? " NOT NULL" : "";
             const gen = autoIncrement ? (sqlite ? " AUTOINCREMENT" : " AUTO_INCREMENT") : "";
-            const as = column.asExpression ? " AS ("+column.asExpression+") "+(column.generatedType || "VIRTUAL") : "";
+            const asExpression = column.asExpression && (typeof column.asExpression === "string" ? expressionFilter(column.asExpression, dbType) : column.asExpression[dbType]);
+            const as = asExpression ? " AS ("+asExpression+") "+(column.generatedType || "VIRTUAL") : "";
             const def = Object.hasOwn(column, "default") ? " DEFAULT "+column.default:"";
             const key = column.primaryKey ? " PRIMARY KEY" : (column.unique ? " UNIQUE" : "");
             const comment = !other && column.comment ? " COMMENT '"+column.comment.replace(/'/g, "''")+"'" : "";
@@ -69,7 +75,7 @@ export class DDL {
 
         // Create SQL
         const table = nameOverride ?? schema.name;
-        const columns = Object.entries(schema.properties).filter(([_n,c]) => !sqlite || !c.generatedType).map(([n,c]) => createColumn(n, c!)).join("");
+        const columns = Object.entries(schema.properties).map(([n,c]) => createColumn(n, c!)).join("");
         const indices = !other && schema.indices?.map(i => createIndex(i)).join("") || "";
         const relations = !sqlite && Object.entries(schema.relations || []).map(([n, r]) => createRelation(schema.name, n, r!)).join("") || "";
         const constraints = !sqlite && (schema.constraints || []).map(c => createConstraint(schema.name, c)).join("") || "";
@@ -78,7 +84,7 @@ export class DDL {
         let sql = `CREATE TABLE IF NOT EXISTS ${table} (\n${columns}${indices}${relations}${constraints})`;
 
         // Independent indexes
-        if (other) sql += "\n\n"+schema.indices?.map(i => i.fulltext ? "" : createIndex(i, 0, table)).join("");
+        if (other && schema.indices) sql += "\n\n"+schema.indices?.map(i => i.fulltext ? "" : createIndex(i, 0, table)).join("");
 
         const fixDanglingComma = (sql: string) => sql.replace(/,\n\)/, "\n);");
         sql = fixDanglingComma(postgres ? this.postgres(sql) : sql);

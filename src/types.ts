@@ -23,7 +23,7 @@ export interface Property {
 
 // JSON Schema Extensions Properties
 export interface Column extends Property {
-    asExpression?: string,
+    asExpression?: string | { [key: string]: string },
     comment?: string,
     dateOn?: "delete" | "insert" | "update",
     generatedType?: string | "virtual" | "stored",
