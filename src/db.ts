@@ -5,15 +5,15 @@ import { DDL } from "./ddl.ts";
 
 // See https://github.com/eveningkid/denodb/blob/master/deps.ts
 import { Client as MySQLClient, configLogger } from "https://deno.land/x/mysql@v2.10.2/mod.ts";
-import { DB as SQLiteClient, QueryParameterSet } from "https://deno.land/x/sqlite@v3.3.0/mod.ts";
-import { Pool as PostgresClient } from "https://deno.land/x/postgres@v0.15.0/mod.ts";
+import { DB as SQLiteClient, QueryParameterSet } from "https://deno.land/x/sqlite@v3.4.0/mod.ts";
+import { Pool as PostgresClient } from "https://deno.land/x/postgres@v0.16.1/mod.ts";
 
 
 const logger = getLogger("dbx:db");
 
 // Syntactic Sugar
 function clean(sql: string) {
-    return sql.replaceAll(/[ \n\r\t]+/g, " ").trim();
+    return DB._sqlFilter(sql).replaceAll(/[ \n\r\t]+/g, " ").trim();
 }
 
 const Hook = {
@@ -113,6 +113,11 @@ export class DB {
     static schemas = new Map<string,Schema>();
     static type = "mysql";
 
+    // Mainly for debugging/tests (useful for SQLite)
+    static _sqlFilter = function(sql: string): string {
+        return sql;
+    }
+
     static async connect(config: ClientConfig, schemas?: Schema[]): Promise<Client> {
         schemas?.forEach(s => DB.schemas.set(s.name, s));
         if (DB.client) return Promise.resolve(DB.client);
@@ -153,7 +158,7 @@ export class DB {
         if (debug) console.debug({ method: "query", sql: clean(sql), parameters });
 
         // At this point SQL contains only `?` and the parameters is an array
-        return DB.client.query(sql, parameters);
+        return DB.client.query(DB._sqlFilter(sql), parameters);
     }
 
     static execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug = false) {
@@ -169,7 +174,7 @@ export class DB {
         if (debug) console.debug({ method: "execute", sql: clean(sql), parameters });
 
         // At this point SQL contains only `?` and the parameters is an array
-        return DB.client.execute(sql, parameters);
+        return DB.client.execute(DB._sqlFilter(sql), parameters);
     }
 
     // Uses the most standard MySQL syntax and then it is fixed afterwards

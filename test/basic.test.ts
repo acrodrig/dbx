@@ -71,7 +71,7 @@ test("Find by ID and update", options, async function() {
 
     // Updated account has the right values
     account.comments = comments;
-    account = await repo.update(account, true) as AccountModel;
+    account = await repo.update(account) as AccountModel;
     assert.equal(account.id, id);
     assert.equal(account.comments, comments);
 

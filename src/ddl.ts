@@ -1,4 +1,5 @@
 import { Column, Constraint, Index, Relation, Schema } from "./types.ts";
+import DB from "./db.ts";
 
 
 const dataTypes = {
@@ -15,13 +16,8 @@ export class DDL {
     static padWidth = 4;
     static defaultWidth = 256;
 
-    // Light compatibility layer!
-    static defaultExpressionFilter(sql: string, type: string): string | undefined {
-        return sql;
-    }
-
     // Uses the most standard MySQL syntax and then it is fixed afterwards
-    static createTable(schema: Schema, dbType = "mysql", nameOverride?: string, expressionFilter = DDL.defaultExpressionFilter): string {
+    static createTable(schema: Schema, dbType = "mysql", nameOverride?: string): string {
         // Get name padding
         const namePad = Math.max(...Object.keys(schema.properties).map(n => n.length || 0)) + 1;
 
@@ -39,7 +35,7 @@ export class DDL {
             const length = type.endsWith("CHAR") ? "("+(column.maxLength || defaultWidth)+")" : "";
             const nullable = column.primaryKey || column.required ? " NOT NULL" : "";
             const gen = autoIncrement ? (sqlite ? " AUTOINCREMENT" : " AUTO_INCREMENT") : "";
-            const asExpression = column.asExpression && (typeof column.asExpression === "string" ? expressionFilter(column.asExpression, dbType) : column.asExpression[dbType]);
+            const asExpression = column.asExpression && (typeof column.asExpression === "string" ? DB._sqlFilter(column.asExpression) : column.asExpression[dbType]);
             const as = asExpression ? " AS ("+asExpression+") "+(column.generatedType || "VIRTUAL") : "";
             const def = Object.hasOwn(column, "default") ? " DEFAULT "+column.default:"";
             const key = column.primaryKey ? " PRIMARY KEY" : (column.unique ? " UNIQUE" : "");
