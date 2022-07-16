@@ -133,8 +133,12 @@ export class DB {
     static _transformParameters(sql: string, objectParameters: { [key: string]: unknown }, arrayParameters: unknown[]): string {
         arrayParameters.splice(0, arrayParameters.length);
         return sql.replace(/[:][$A-Z_][0-9A-Z_$]*/ig, function(name) {
-            arrayParameters.push(objectParameters[name.substring(1)] ?? undefined);
-            return "?";
+            const value = objectParameters[name.substring(1)];
+            const isArray = Array.isArray(value);
+            // If it is an array we need to repeat N times the '?' and append all the values
+            if (isArray) arrayParameters.push(...value);
+            else arrayParameters.push(value ?? undefined);
+            return isArray ? value.map(_ => "?").join(",") : "?";
         });
     }
 
