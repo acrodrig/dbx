@@ -31,6 +31,7 @@ export interface Column extends Property {
 }
 
 export interface Index {
+    array?: number,
     comment?: string,
     properties: string[],
     fulltext?: boolean,

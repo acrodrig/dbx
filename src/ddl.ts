@@ -36,7 +36,7 @@ export class DDL {
             const nullable = column.primaryKey || column.required ? " NOT NULL" : "";
             const gen = autoIncrement ? (sqlite ? " AUTOINCREMENT" : " AUTO_INCREMENT") : "";
             const asExpression = column.asExpression && (typeof column.asExpression === "string" ? DB._sqlFilter(column.asExpression) : column.asExpression[dbType]);
-            const as = asExpression ? " AS ("+asExpression+") "+(column.generatedType || "VIRTUAL") : "";
+            const as = asExpression ? " AS ("+asExpression+") "+(column.generatedType?.toUpperCase() || "VIRTUAL") : "";
             const def = Object.hasOwn(column, "default") ? " DEFAULT "+column.default:"";
             const key = column.primaryKey ? " PRIMARY KEY" : (column.unique ? " UNIQUE" : "");
             const comment = !other && column.comment ? " COMMENT '"+column.comment.replace(/'/g, "''")+"'" : "";
@@ -47,10 +47,15 @@ export class DDL {
         // If we pass a table name it will create an independent expression
         const createIndex = function(indice: Index, padWidth = 4, table?: string): string {
             const pad = "".padEnd(padWidth);
-            const columns = indice.properties as string[];
+            const columns = [...indice.properties] as string[];
             const key = indice.fulltext ? "FULLTEXT" : "INDEX";
             const ine = table ? " IF NOT EXISTS" : "";
             const end = table ? ";" : ",";
+
+            // If there is an array expression, replace the column by it
+            // TODO: multivalued indexes only supported on MYSQL for now
+            if (!other && indice.array !== undefined) columns[indice.array] = "(CAST("+columns[indice.array]+" AS UNSIGNED ARRAY))";
+
             return `${pad}${table ? "CREATE " : ""}${indice.unique ? "UNIQUE " : ""}${key}${ine} ${table ? table+"_" : ""}${indice.name ?? ""}${table ? " ON "+table : ""} (${columns.join(",")})${end}\n`;
         }
 
@@ -80,7 +85,7 @@ export class DDL {
         let sql = `CREATE TABLE IF NOT EXISTS ${table} (\n${columns}${indices}${relations}${constraints})`;
 
         // Independent indexes
-        if (other && schema.indices) sql += "\n\n"+schema.indices?.map(i => i.fulltext ? "" : createIndex(i, 0, table)).join("");
+        if (other && schema.indices) sql += "\n"+schema.indices?.map(i => i.fulltext ? "" : createIndex(i, 0, table)).join("");
 
         const fixDanglingComma = (sql: string) => sql.replace(/,\n\)/, "\n);");
         sql = fixDanglingComma(postgres ? this.postgres(sql) : sql);
