@@ -13,13 +13,12 @@
         "phone":       { "type": "string",  "required": false, "maxLength": 128, "comment": "Handle associated with the account" },
         "name":        { "type": "string",  "required": true,  "maxLength": 128, "unique": true, "comment": "Descriptive name to identify the instance" },
         "preferences": { "type": "json",    "required": true,  "default": { "wrap": true, "minAge": 18 }, "comment": "All the general options associated with the account." },
-
-        "keyList":     { "type": "json",    "asExpression": "JSON_KEYS(preferences)", "generatedType": "stored" }
+        "valueList":   { "type": "json",    "asExpression": "JSON_EXTRACT(preferences, '$.*')", "generatedType": "stored" }
     },
     "indices": [
         { "name": "inserted", "properties": ["inserted"] },
         { "name": "updated", "properties": ["updated"] },
-        { "name": "keyList", "properties": ["id", "keyList", "enabled"], "array": 1 },
+        { "name": "valueList", "properties": ["id", "valueList", "enabled"], "array": 1 },
         { "properties": ["comments", "country", "phone", "name"], "fulltext": true }
     ],
     "constraints": [

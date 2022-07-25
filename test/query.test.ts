@@ -1,6 +1,8 @@
+#!/usr/bin/env -S deno test -A --no-check
+
 import { assert, assertEquals, path } from "./deps.ts";
 import DB from "../src/db.ts";
-import { dbInit } from "./helpers.ts";
+import { dbInit, getProvider } from "./helpers.ts";
 
 
 const __dirname = path.dirname(path.fromFileUrl(import.meta.url));
@@ -8,11 +10,9 @@ const __dirname = path.dirname(path.fromFileUrl(import.meta.url));
 const test = Deno.test;
 const options = { sanitizeResources: false, sanitizeOps: false };
 
-const TEST_PROVIDER = (Deno.env.get("TEST_PROVIDER") || "sqlite").toLowerCase();
-
 // See https://lucy-kim.github.io/pages/learn-mySQL.html
 
-await dbInit(TEST_PROVIDER, []);
+await dbInit(getProvider(), []);
 
 const DATA = Deno.readTextFileSync(__dirname+"/../resources/data.sql");
 

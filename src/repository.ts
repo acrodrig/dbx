@@ -25,6 +25,7 @@ const operators = {
     lt:  "<",
     lte: "<=",
     in: "IN",
+    contains: "MEMBER OF",
     nin: "NOT IN",
     match: "MATCH"
 };
@@ -166,7 +167,7 @@ export class Repository<T extends Identifiable> {
         const record = this.toRecord(object);
         const names = Object.keys(record), values = Object.values(record);
         const columns = names.map(name => ""+CQ+name+CQ+"").join(",");
-        const sql = `INSERT INTO ${this.table} (${columns}) VALUES (${join("?",names.length)})${DB.type === "postgres" ? " RETURNING id" : ""}`;
+        const sql = `INSERT INTO ${this.table} (${columns}) VALUES (${join("?",names.length)})${DB.type === DB.Provider.POSTGRES ? " RETURNING id" : ""}`;
         const parameters = [...values];
         logger.debug({ method: "insert", sql: clean(sql), parameters });
         if (debug) console.debug({ method: "insert", sql: clean(sql), parameters });
@@ -279,7 +280,8 @@ export class Repository<T extends Identifiable> {
                     if (key === "neq") op = "IS NOT";
                 }
 
-                expressions.push(column+" "+op+(explode ? " ("+join("?", value[key].length)+")" : " ?"));
+                if (key === "contains") expressions.push(DB.type === DB.Provider.SQLITE ? column+" LIKE ?" : "? "+op+" ("+column+")");
+                else expressions.push(column+" "+op+(explode ? " ("+join("?", value[key].length)+")" : " ?"));
             }
             else {
                 tree.push(value);

@@ -5,16 +5,15 @@ import { Schema } from "../src/types.ts";
 import DB from "../src/db.ts";
 import AccountModel from "../resources/account.ts";
 import AccountSchema from "../resources/account.json" assert { type: "json" };
-import { dbInit } from "./helpers.ts";
+import { dbInit, getProvider } from "./helpers.ts";
 
 
 const test = Deno.test;
 const options = { sanitizeResources: false, sanitizeOps: false };
 
-const TEST_PROVIDER = (Deno.env.get("TEST_PROVIDER") || "mysql").toLowerCase();
 const NAME = "Testing Account for QA Team";
 
-await dbInit(TEST_PROVIDER, [ AccountSchema as Schema ]);
+await dbInit(getProvider(), [ AccountSchema as Schema ]);
 
 let id = -1;
 
@@ -57,6 +56,11 @@ test("Retrieve via SQL query", options, async function() {
 test("Full Text search", options, async function() {
     const accounts = await repo.find({ where: { name: { match: "Team" } } });
     assertEquals(accounts.length, 1);
+});
+
+test("Multi Valued Index search", options, async function() {
+    const accounts = await repo.find({ where: { valueList: { contains: "Huh?" } } });
+    assertEquals(accounts.length, 0);
 });
 
 test("Query with raw SQL", options, async function() {

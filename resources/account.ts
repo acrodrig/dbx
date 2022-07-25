@@ -8,6 +8,7 @@ export default class Account {
     name!: string;
     phone?: string;
     preferences: { [key: string]: boolean|number|string; } = { wrap: true, minAge: 18 };
+    valueList: string[] = [];
     provider?: string;
 
     constructor(data?: Pick<Account, "name"> & Partial<Account>) {

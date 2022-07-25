@@ -11,6 +11,9 @@ import { Pool as PostgresClient } from "https://deno.land/x/postgres@v0.16.1/mod
 
 const logger = getLogger("dbx:db");
 
+// See https://stackoverflow.com/questions/49285864/is-there-a-valueof-similar-to-keyof-in-typescript
+type Values<T> = T[keyof T];
+
 // Syntactic Sugar
 function clean(sql: string) {
     return DB._sqlFilter(sql).replaceAll(/[ \n\r\t]+/g, " ").trim();
@@ -24,6 +27,13 @@ const Hook = {
     BEFORE_INSERT: "before-insert",
     BEFORE_UPDATE: "before-update",
 } as const;
+
+const Provider = {
+    MYSQL: "mysql",
+    POSTGRES: "postgres",
+    SQLITE: "sqlite",
+} as const;
+type Provider = Values<typeof Provider>;
 
 export interface Client {
     type: string;
@@ -49,12 +59,12 @@ export interface ClientConfig {
 }
 
 async function connect(config: ClientConfig): Promise<Client> {
-    if (config.type === "mysql") {
+    if (config.type === Provider.MYSQL) {
         if (!config.debug) await configLogger({ enable: false });
         config = Object.assign(config, { db: config.database });
         const nativeClient = await new MySQLClient().connect(config);
         return new class implements Client {
-            type = "mysql";
+            type = config.type;
             close() {
                 return nativeClient.close();
             }
@@ -66,11 +76,11 @@ async function connect(config: ClientConfig): Promise<Client> {
             }
         }
     }
-    if (config.type === "postgres") {
+    if (config.type === Provider.POSTGRES) {
         config = Object.assign(config, { user: config.username });
         const nativeClient = await new PostgresClient(config, config.poolSize ?? 1).connect();
         return new class implements Client {
-            type = "postgres";
+            type = config.type;
             close() {
                 return Promise.resolve();
             }
@@ -84,10 +94,10 @@ async function connect(config: ClientConfig): Promise<Client> {
             }
         }
     }
-    if (config.type === "sqlite") {
+    if (config.type === Provider.SQLITE) {
         const nativeClient = new SQLiteClient(config.database ?? Deno.env.get("DB_FILE") ?? ":memory:");
         return new class implements Client {
-            type = "sqlite";
+            type = config.type;
             close() {
                 nativeClient.close();
                 return Promise.resolve();
@@ -107,11 +117,12 @@ async function connect(config: ClientConfig): Promise<Client> {
 export class DB {
 
     static Hook = Hook;
+    static Provider = Provider;
     static readonly ALL = Number.MAX_SAFE_INTEGER;
     static clientConfig: ClientConfig;
     static client: Client;
     static schemas = new Map<string,Schema>();
-    static type = "mysql";
+    static type: string = Provider.MYSQL;
 
     // Mainly for debugging/tests (useful for SQLite)
     static _sqlFilter = function(sql: string): string {
@@ -156,7 +167,7 @@ export class DB {
             sql = DB._transformParameters(sql, parameters, arrayParameters);
             parameters = arrayParameters;
         }
-        if (DB.type === "postgres") sql = DB._transformPlaceholders(sql);
+        if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
         logger.debug({ method: "query", sql: clean(sql), parameters });
         if (debug) console.debug({ method: "query", sql: clean(sql), parameters });
@@ -172,7 +183,7 @@ export class DB {
             sql = DB._transformParameters(sql, parameters, arrayParameters);
             parameters = arrayParameters;
         }
-        if (DB.type === "postgres") sql = DB._transformPlaceholders(sql);
+        if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
         logger.debug({ method: "execute", sql: clean(sql), parameters });
         if (debug) console.debug({ method: "execute", sql: clean(sql), parameters });
@@ -203,11 +214,13 @@ export class DB {
 }
 
 type LocalClientConfig = ClientConfig;
+type LocalProvider = Provider;
 type LocalSchema = Schema;
 
 // deno-lint-ignore no-namespace
 export namespace DB {
     export type ClientConfig = LocalClientConfig;
+    export type Provider = LocalProvider;
     export type Schema = LocalSchema;
 }
 

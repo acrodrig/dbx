@@ -64,6 +64,7 @@ export type Predicate<PT> = {
     lte?: PT;
     in?: PT[];
     nin?: PT[];
+    contains?: string;
     match?: string;
     between?: [PT, PT];
     exists?: boolean;
