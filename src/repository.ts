@@ -81,6 +81,8 @@ export class Repository<T extends Identifiable> {
         // If there is no filter, we are better off returning the results from all
         if (!where) throw new Error("Cannot perform unrestricted DELETE (with no WHERE clause)!");
 
+        Object.ensures(arguments, Object, Boolean);
+
         // Delete restricted to WHERE clause
         const whereTree: Primitive[] = [];
         const sql = `DELETE FROM ${this.table} WHERE ${Repository._where({ ...where, ...this.baseWhere }, whereTree)}`;
@@ -93,6 +95,8 @@ export class Repository<T extends Identifiable> {
 
     // https://dev.mysql.com/doc/refman/8.0/en/delete.html
     async deleteById(id: number, debug = false): Promise<boolean> {
+        Object.ensures(arguments, Number, Boolean);
+
         const whereTree: Primitive[] = [];
         const sql = `DELETE FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
         const parameters = [id, ...whereTree];
@@ -107,6 +111,8 @@ export class Repository<T extends Identifiable> {
     // https://dev.mysql.com/doc/refman/8.0/en/select.html
     // Follow Loopback model (see https://loopback.io/doc/en/lb4/Querying-data.html)
     async find(filter?: Filter<T>, debug = false): Promise<T[]> {
+        Object.ensures(arguments, [Object,undefined], Boolean);
+
         // If there is no filter, we are better off returning the results from all
         if (!filter) return this.all();
 
@@ -145,6 +151,8 @@ export class Repository<T extends Identifiable> {
 
     // https://dev.mysql.com/doc/refman/8.0/en/select.html
     async findById(id: number, debug = false): Promise<T|undefined> {
+        Object.ensures(arguments, Number, Boolean);
+
         const whereTree: Primitive[] = []
         const sql = `SELECT * FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
         const parameters = [id, ...whereTree];
@@ -164,6 +172,9 @@ export class Repository<T extends Identifiable> {
 
     // https://dev.mysql.com/doc/refman/8.0/en/insert.html
     async insert(object: T, debug = false): Promise<T> {
+        Object.ensures(arguments, Object, Boolean);
+        Object.ensure(object.id, undefined);
+
         const record = this.toRecord(object);
         const names = Object.keys(record), values = Object.values(record);
         const columns = names.map(name => ""+CQ+name+CQ+"").join(",");
@@ -173,6 +184,7 @@ export class Repository<T extends Identifiable> {
         if (debug) console.debug({ method: "insert", sql: clean(sql), parameters });
         await this.emitter.emit(Hook.BEFORE_INSERT, this, object);
         const result = await DB.execute(sql, parameters as Primitive[]);
+        if (!result.lastInsertId) logger.warning({ method: "insert", sql: clean(sql), warning: "Insert did produce a last inserted ID" });
         if (result.lastInsertId) object.id = result.lastInsertId;
         await this.emitter.emit(Hook.AFTER_INSERT, this, object);
         return object;
@@ -180,6 +192,9 @@ export class Repository<T extends Identifiable> {
 
     // https://dev.mysql.com/doc/refman/8.0/en/update.html
     async update(object: Partial<T>, debug = false): Promise<T|undefined> {
+        Object.ensures(arguments, Object, Boolean);
+        Object.ensure(object.id, Number);
+
         const record = this.toRecord(object);
         delete record.id;
         const whereTree: Primitive[] = [];
@@ -192,6 +207,8 @@ export class Repository<T extends Identifiable> {
         const result = await DB.execute(sql, parameters as Primitive[]);
         if (result.lastInsertId) object.id = result.lastInsertId;
         await this.emitter.emit(Hook.AFTER_UPDATE, this, object);
+        if (result.affectedRows === 0) logger.warning({ method: "update", sql: clean(sql), warning: "Update had no affected rows" });
+        if (result.affectedRows! > 1) logger.warning({ method: "update", sql: clean(sql), warning: "Update had more than one affected rows" });
         return result.affectedRows === 1 ? object as T : undefined;
     }
 

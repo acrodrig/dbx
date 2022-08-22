@@ -19,8 +19,8 @@ export async function createTables(schemas: Schema[]) {
 }
 
 export const getProvider = function() {
-    const provider = Deno.env.get("TEST_PROVIDER") || Deno.args[0];
+    const provider = Deno.env.get("TEST_PROVIDER") ?? Deno.args[0];
     if (!provider) console.warn("\n⚠️  Assuming SQLITE provider. You can use 'TEST_PROVIDER=<provider>' or '-- <provider>'\n");
-    if (!Object.values(DB.Provider).includes(provider as any)) console.error("\n❌ DB provider '"+provider+"' does not exist!\n");
+    if (provider && !Object.values(DB.Provider).includes(provider as any)) console.error("\n❌ DB provider '"+provider+"' does not exist!\n");
     return (provider || "sqlite").toLowerCase();
 }

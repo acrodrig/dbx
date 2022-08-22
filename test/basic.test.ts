@@ -53,6 +53,11 @@ test("Retrieve via SQL query", options, async function() {
     assertEquals(accounts[0].name, NAME);
 });
 
+test("Boolean Values", options, async function() {
+    const accounts = await repo.find({ where: { name: "xyz", enabled: true } });
+    assertEquals(accounts.length, 0);
+});
+
 test("Full Text search", options, async function() {
     const accounts = await repo.find({ where: { name: { match: "Team" } } });
     assertEquals(accounts.length, 1);
