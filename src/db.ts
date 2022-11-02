@@ -4,7 +4,7 @@ import { Repository } from "./repository.ts";
 import { DDL } from "./ddl.ts";
 
 // See https://github.com/eveningkid/denodb/blob/master/deps.ts
-import { Client as MySQLClient, configLogger } from "https://deno.land/x/mysql@v2.10.2/mod.ts";
+import { Client as MySQLClient, configLogger } from "https://deno.land/x/mysql@v2.10.3/mod.ts";
 import { DB as SQLiteClient, QueryParameterSet } from "https://deno.land/x/sqlite@v3.4.0/mod.ts";
 import { Pool as PostgresClient } from "https://deno.land/x/postgres@v0.16.1/mod.ts";
 
