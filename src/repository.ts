@@ -81,7 +81,8 @@ export class Repository<T extends Identifiable> {
         // If there is no filter, we are better off returning the results from all
         if (!where) throw new Error("Cannot perform unrestricted DELETE (with no WHERE clause)!");
 
-        Object.ensures(arguments, Object, Boolean);
+        Object.ensure(where, Object);
+        Object.ensure(debug, Boolean);
 
         // Delete restricted to WHERE clause
         const whereTree: Primitive[] = [];
@@ -95,7 +96,8 @@ export class Repository<T extends Identifiable> {
 
     // https://dev.mysql.com/doc/refman/8.0/en/delete.html
     async deleteById(id: number, debug = false): Promise<boolean> {
-        Object.ensures(arguments, Number, Boolean);
+        Object.ensure(id, Number);
+        Object.ensure(debug, Boolean);
 
         const whereTree: Primitive[] = [];
         const sql = `DELETE FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
@@ -111,7 +113,8 @@ export class Repository<T extends Identifiable> {
     // https://dev.mysql.com/doc/refman/8.0/en/select.html
     // Follow Loopback model (see https://loopback.io/doc/en/lb4/Querying-data.html)
     async find(filter?: Filter<T>, debug = false): Promise<T[]> {
-        Object.ensures(arguments, [Object,undefined], Boolean);
+        Object.ensure(filter, [Object,undefined]);
+        Object.ensure(debug, Boolean);
 
         // If there is no filter, we are better off returning the results from all
         if (!filter) return this.all();
@@ -128,9 +131,9 @@ export class Repository<T extends Identifiable> {
         // This is the only method where full text search is permitted (it could be disastrous in DELETE for example)
         const fullTextColumns = DB.type === "mysql" ? this.schema?.indices?.find(i => i.fulltext)?.properties : undefined;
 
-        // Build SQL
+        // Build SQL (if there is a select, clean it to prevent SQL injection)
         const sql = `
-            SELECT ${select.length ? join("??", select.length) : "*"}
+            SELECT ${select.length ? select.map(c => c.replace(/[^a-zA-Z0-9_]/g, "")).join(",") : "*"}
             FROM ${this.table}
             WHERE ${Repository._where({ ...where, ...this.baseWhere }, whereTree, fullTextColumns)}
             ORDER BY ${Repository._order(filter.order) || "NULL"}
@@ -138,7 +141,7 @@ export class Repository<T extends Identifiable> {
         `;
 
         // Build parameters
-        const parameters = [...select, ...whereTree, limit, offset];
+        const parameters = [...whereTree, limit, offset];
 
         logger.debug({ method: "find", sql: clean(sql), parameters });
         if (debug) console.debug({ method: "find", sql: clean(sql), parameters });
@@ -151,7 +154,8 @@ export class Repository<T extends Identifiable> {
 
     // https://dev.mysql.com/doc/refman/8.0/en/select.html
     async findById(id: number, debug = false): Promise<T|undefined> {
-        Object.ensures(arguments, Number, Boolean);
+        Object.ensure(id, Number);
+        Object.ensure(debug, Boolean);
 
         const whereTree: Primitive[] = []
         const sql = `SELECT * FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
@@ -172,8 +176,8 @@ export class Repository<T extends Identifiable> {
 
     // https://dev.mysql.com/doc/refman/8.0/en/insert.html
     async insert(object: T, debug = false): Promise<T> {
-        Object.ensures(arguments, Object, Boolean);
-        Object.ensure(object.id, undefined);
+        Object.ensure(object, Object);
+        Object.ensure(debug, Boolean);
 
         const record = this.toRecord(object);
         const names = Object.keys(record), values = Object.values(record);
@@ -192,8 +196,9 @@ export class Repository<T extends Identifiable> {
 
     // https://dev.mysql.com/doc/refman/8.0/en/update.html
     async update(object: Partial<T>, debug = false): Promise<T|undefined> {
-        Object.ensures(arguments, Object, Boolean);
+        Object.ensure(object, Object);
         Object.ensure(object.id, Number);
+        Object.ensure(debug, Boolean);
 
         const record = this.toRecord(object);
         delete record.id;
