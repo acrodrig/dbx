@@ -34,8 +34,8 @@ jobs:
       - run: deno fmt --options-line-width 180 src test
 
       # Will auto commit without adding any new files (see https://github.com/stefanzweifel/git-auto-commit-action)
-      - uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          add_options: '-u'
-          commit_message: Apply formatting changes
-          branch: ${{ github.head_ref }}
+      # - uses: stefanzweifel/git-auto-commit-action@v4
+      #   with:
+      #     add_options: '-u'
+      #     commit_message: Apply formatting changes
+      #     branch: ${{ github.head_ref }}
