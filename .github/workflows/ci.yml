@@ -31,11 +31,4 @@ jobs:
           fail_ci_if_error: true
 
       # Format code and commit back (see https://mskelton.medium.com/auto-formatting-code-using-prettier-and-github-actions-ed458f58b7df)
-      - run: deno fmt --options-line-width 180 src test
-
-      # Will auto commit without adding any new files (see https://github.com/stefanzweifel/git-auto-commit-action)
-      # - uses: stefanzweifel/git-auto-commit-action@v4
-      #   with:
-      #     add_options: '-u'
-      #     commit_message: Apply formatting changes
-      #     branch: ${{ github.head_ref }}
+      - run: deno fmt --options-line-width 180 --check src test
