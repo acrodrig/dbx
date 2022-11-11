@@ -12,7 +12,7 @@ const test = Deno.test;
 const DEBUG = Deno.env.get("DEBUG") !== undefined;
 const HR = "-".repeat(80);
 
-const MYSQL= `
+const MYSQL = `
 CREATE TABLE IF NOT EXISTS TestAccount (
     id          INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Unique identifier, auto-generated. It''s the primary key.',
     inserted    DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp when current record is inserted',
@@ -36,12 +36,11 @@ CREATE TABLE IF NOT EXISTS TestAccount (
 );
 `.trim();
 
-test("Table Creation MySQL", function() {
-    const ddl = DB.createTable(AccountSchema as Schema, "mysql", false, "TestAccount");
-    if (DEBUG) console.log(`\nMYSQL\n${HR}\n${ddl}\n\n`);
-    assertEquals(ddl.trim(), MYSQL);
+test("Table Creation MySQL", function () {
+  const ddl = DB.createTable(AccountSchema as Schema, "mysql", false, "TestAccount");
+  if (DEBUG) console.log(`\nMYSQL\n${HR}\n${ddl}\n\n`);
+  assertEquals(ddl.trim(), MYSQL);
 });
-
 
 const SQLITE = `
 CREATE TABLE IF NOT EXISTS TestAccount (
@@ -64,10 +63,10 @@ CREATE INDEX IF NOT EXISTS TestAccount_updated ON TestAccount (updated);
 CREATE INDEX IF NOT EXISTS TestAccount_valueList ON TestAccount (id,valueList,enabled);
 `.trim();
 
-test("Table Creation SQLite", function() {
-    const ddl = DB.createTable(AccountSchema as Schema, "sqlite", false, "TestAccount");
-    if (DEBUG) console.log(`\nSQLite\n${HR}\n${ddl}\n\n`);
-    assertEquals(ddl.trim(), SQLITE);
+test("Table Creation SQLite", function () {
+  const ddl = DB.createTable(AccountSchema as Schema, "sqlite", false, "TestAccount");
+  if (DEBUG) console.log(`\nSQLite\n${HR}\n${ddl}\n\n`);
+  assertEquals(ddl.trim(), SQLITE);
 });
 
 const RLIKE = "~*";
@@ -95,8 +94,8 @@ CREATE INDEX IF NOT EXISTS TestAccount_updated ON TestAccount (updated);
 CREATE INDEX IF NOT EXISTS TestAccount_valueList ON TestAccount (id,valueList,enabled);
 `.trim();
 
-test("Table Creation Postgres", function() {
-    const ddl = DB.createTable(AccountSchema as Schema, "postgres", false, "TestAccount");
-    if (DEBUG) console.log(`\nPostgres\n${HR}\n${ddl}\n\n`);
-    assertEquals(ddl.trim(), POSTGRES);
+test("Table Creation Postgres", function () {
+  const ddl = DB.createTable(AccountSchema as Schema, "postgres", false, "TestAccount");
+  if (DEBUG) console.log(`\nPostgres\n${HR}\n${ddl}\n\n`);
+  assertEquals(ddl.trim(), POSTGRES);
 });
