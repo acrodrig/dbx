@@ -3,6 +3,6 @@
     "check": "deno check mod.ts",
     "fmt": "deno fmt --options-line-width 180 src test",
     "lint": "deno lint src test",
-    "test": "deno test -A"
+    "test": "deno test -A --unstable"
   }
 }

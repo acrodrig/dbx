@@ -26,10 +26,10 @@ CREATE TABLE IF NOT EXISTS TestAccount (
     phone       VARCHAR(128) COMMENT 'Handle associated with the account',
     name        VARCHAR(128) NOT NULL UNIQUE COMMENT 'Descriptive name to identify the instance',
     preferences JSON NOT NULL DEFAULT ('{"wrap":true,"minAge":18}') COMMENT 'All the general options associated with the account.',
-    valueList   JSON AS (JSON_EXTRACT(preferences, '$.*')) STORED,
+    valueList   JSON GENERATED ALWAYS AS (JSON_EXTRACT(preferences, '$.*')) STORED,
     INDEX inserted (inserted),
     INDEX updated (updated),
-    INDEX valueList (id,(CAST(valueList AS UNSIGNED ARRAY)),enabled),
+    INDEX valueList (id,(CAST(valueList AS CHAR(32) ARRAY)),enabled),
     FULLTEXT  (comments,country,phone,name),
     CONSTRAINT account_email CHECK (email IS NULL OR email RLIKE '^[^@]+@[^@]+[.][^@]{2,}$'),
     CONSTRAINT account_phone CHECK (phone IS NULL OR phone RLIKE '^[0-9]{8,16}$')
@@ -56,11 +56,11 @@ CREATE TABLE IF NOT EXISTS TestAccount (
     phone       VARCHAR(128),
     name        VARCHAR(128) NOT NULL UNIQUE,
     preferences JSON NOT NULL DEFAULT ('{"wrap":true,"minAge":18}'),
-    valueList   JSON AS (JSON_EXTRACT(preferences, '$.*')) STORED
+    valueList   JSON GENERATED ALWAYS AS (JSON_EXTRACT(preferences, '$.*')) STORED
 );
 CREATE INDEX IF NOT EXISTS TestAccount_inserted ON TestAccount (inserted);
 CREATE INDEX IF NOT EXISTS TestAccount_updated ON TestAccount (updated);
-CREATE INDEX IF NOT EXISTS TestAccount_valueList ON TestAccount (id,valueList,enabled);
+CREATE INDEX IF NOT EXISTS TestAccount_valueList ON TestAccount (id,(CAST(valueList AS CHAR(32))),enabled);
 `.trim();
 
 test("Table Creation SQLite", function () {
@@ -85,13 +85,13 @@ CREATE TABLE IF NOT EXISTS TestAccount (
     phone       VARCHAR(128),
     name        VARCHAR(128) NOT NULL UNIQUE,
     preferences JSON NOT NULL DEFAULT ('{"wrap":true,"minAge":18}'),
-    valueList   JSON AS (JSON_EXTRACT(preferences, '$.*')) STORED,
+    valueList   JSON GENERATED ALWAYS AS (JSON_EXTRACT_PATH(preferences, '$.*')) STORED,
     CONSTRAINT account_email CHECK (email IS NULL OR email ${RLIKE} '^[^@]+@[^@]+[.][^@]{2,}$'),
     CONSTRAINT account_phone CHECK (phone IS NULL OR phone ${RLIKE} '^[0-9]{8,16}$')
 );
 CREATE INDEX IF NOT EXISTS TestAccount_inserted ON TestAccount (inserted);
 CREATE INDEX IF NOT EXISTS TestAccount_updated ON TestAccount (updated);
-CREATE INDEX IF NOT EXISTS TestAccount_valueList ON TestAccount (id,valueList,enabled);
+CREATE INDEX IF NOT EXISTS TestAccount_valueList ON TestAccount (id,(CAST(valueList AS CHAR(32))),enabled);
 `.trim();
 
 test("Table Creation Postgres", function () {

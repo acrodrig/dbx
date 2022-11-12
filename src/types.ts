@@ -36,6 +36,7 @@ export interface Index {
   properties: string[];
   fulltext?: boolean;
   name?: string;
+  subType?: string;
   unique?: boolean;
 }
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno test -A --no-check
+#!/usr/bin/env -S deno test -A --unstable --no-check
 
 import { assert, assertEquals, assertExists } from "./deps.ts";
 import { Schema } from "../src/types.ts";

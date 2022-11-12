@@ -294,7 +294,12 @@ export class Repository<T extends Identifiable> {
           if (key === "neq") op = "IS NOT";
         }
 
-        if (key === "contains") expressions.push(DB.type === DB.Provider.SQLITE ? column + " LIKE ?" : "? " + op + " (" + column + ")");
+        // See this SQ for Postgres operators: https://stackoverflow.com/a/38374876/2772798
+        if (key === "contains") {
+          if (DB.type === DB.Provider.MYSQL) expressions.push("? " + op + " (" + column + ")");
+          if (DB.type === DB.Provider.POSTGRES) expressions.push("JSONB_EXISTS(CAST(" + column + " AS JSONB), ?)");
+          if (DB.type === DB.Provider.SQLITE) expressions.push(column + " LIKE ?");
+        }
         else expressions.push(column + " " + op + (explode ? " (" + join("?", value[key].length) + ")" : " ?"));
       } else {
         tree.push(value);

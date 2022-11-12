@@ -34,7 +34,7 @@ export class DDL {
       const nullable = column.primaryKey || column.required ? " NOT NULL" : "";
       const gen = autoIncrement ? (sqlite ? " AUTOINCREMENT" : " AUTO_INCREMENT") : "";
       const asExpression = column.asExpression && (typeof column.asExpression === "string" ? DB._sqlFilter(column.asExpression) : column.asExpression[dbType]);
-      const as = asExpression ? " AS (" + asExpression + ") " + (column.generatedType?.toUpperCase() || "VIRTUAL") : "";
+      const as = asExpression ? " GENERATED ALWAYS AS (" + asExpression + ") " + (column.generatedType?.toUpperCase() || "VIRTUAL") : "";
       const def = Object.hasOwn(column, "default") ? " DEFAULT " + column.default : "";
       const key = column.primaryKey ? " PRIMARY KEY" : (column.unique ? " UNIQUE" : "");
       const comment = !other && column.comment ? " COMMENT '" + column.comment.replace(/'/g, "''") + "'" : "";
@@ -51,8 +51,9 @@ export class DDL {
       const end = table ? ";" : ",";
 
       // If there is an array expression, replace the column by it
-      // TODO: multivalued indexes only supported on MYSQL for now
-      if (!other && indice.array !== undefined) columns[indice.array] = "(CAST(" + columns[indice.array] + " AS UNSIGNED ARRAY))";
+      // TODO: multivalued indexes only supported on MYSQL for now, Postgres and SQLite will use the entire
+      const subType = indice.subType ?? "CHAR(32)";
+      if (indice.array !== undefined) columns[indice.array] = "(CAST(" + columns[indice.array] + " AS " + subType + (!other ? " ARRAY" : "") + "))";
 
       const name = indice.name ?? "";
       const unique = indice.unique ? "UNIQUE " : "";
@@ -94,9 +95,10 @@ export class DDL {
   }
 
   static postgres(sql: string) {
-    return sql.replace(/(DATETIME)|(INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT)|(RLIKE)/g, (m: string) => {
+    return sql.replace(/(DATETIME)|(INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT)|(JSON_EXTRACT)|(RLIKE)/g, (m: string) => {
       if (m === "DATETIME") return "TIMESTAMP";
       if (m === "INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT") return "SERIAL";
+      if (m === "JSON_EXTRACT") return "JSON_EXTRACT_PATH";
       if (m === "RLIKE") return "~*";
       return m;
     });
