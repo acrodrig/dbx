@@ -162,6 +162,13 @@ These objectives did not classify as tenets ...
 - Stay away from annotations (for as long as possible)
 - Minimize dependencies
 
+## Debugging
+
+To see the SQL that is being executed, you can set the `DEBUG` environment variables as:
+
+```
+DEBUG=dbx:db
+```
 
 ## Testing
 

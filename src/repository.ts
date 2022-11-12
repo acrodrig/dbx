@@ -299,8 +299,7 @@ export class Repository<T extends Identifiable> {
           if (DB.type === DB.Provider.MYSQL) expressions.push("? " + op + " (" + column + ")");
           if (DB.type === DB.Provider.POSTGRES) expressions.push("JSONB_EXISTS(CAST(" + column + " AS JSONB), ?)");
           if (DB.type === DB.Provider.SQLITE) expressions.push(column + " LIKE ?");
-        }
-        else expressions.push(column + " " + op + (explode ? " (" + join("?", value[key].length) + ")" : " ?"));
+        } else expressions.push(column + " " + op + (explode ? " (" + join("?", value[key].length) + ")" : " ?"));
       } else {
         tree.push(value);
         expressions.push(column + " " + (value === null ? "IS" : "=") + " ?");
