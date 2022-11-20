@@ -10,6 +10,8 @@ import { Pool as PostgresClient } from "https://deno.land/x/postgres@v0.16.1/mod
 
 const logger = getLogger("dbx:db");
 
+const TTY = Deno.isatty(Deno.stderr.rid);
+
 // See https://stackoverflow.com/questions/49285864/is-there-a-valueof-similar-to-keyof-in-typescript
 type Values<T> = T[keyof T];
 
@@ -158,7 +160,7 @@ export class DB {
     return sql;
   }
 
-  static query(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug = false): Promise<Row[]> {
+  static async query(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug = false): Promise<Row[]> {
     // If values are not an array, they need to be transformed (as well as the SQL)
     const arrayParameters: Parameter[] = [];
     if (parameters && !Array.isArray(parameters)) {
@@ -171,10 +173,17 @@ export class DB {
     if (debug) console.debug({ method: "query", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
-    return DB.client.query(DB._sqlFilter(sql), parameters);
+    try {
+      // Need to await to be able to catch potential errors
+      return await DB.client.query(DB._sqlFilter(sql), parameters);
+    } catch (ex) {
+      if (TTY) DB.error(ex, sql, parameters);
+      logger.error({ method: "query", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
+      throw ex;
+    }
   }
 
-  static execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug = false) {
+  static async execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug = false) {
     // If values are not an array, they need to be transformed (as well as the SQL)
     const arrayParameters: Parameter[] = [];
     if (parameters && !Array.isArray(parameters)) {
@@ -187,7 +196,14 @@ export class DB {
     if (debug) console.debug({ method: "execute", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
-    return DB.client.execute(DB._sqlFilter(sql), parameters);
+    try {
+      // Need to await to be able to catch potential errors
+      return DB.client.execute(DB._sqlFilter(sql), parameters);
+    } catch (ex) {
+      if (TTY) DB.error(ex, sql, parameters);
+      logger.error({ method: "execute", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
+      throw ex;
+    }
   }
 
   // Uses the most standard MySQL syntax and then it is fixed afterwards
@@ -208,6 +224,14 @@ export class DB {
   static getRepository<T extends Identifiable>(target: string | Class<T>, schema?: Schema): Repository<T> {
     if (typeof (target) !== "string") return new Repository(target, schema ?? DB.schemas.get(target.name));
     return new Repository(Object as unknown as Class<T>, undefined, target);
+  }
+
+  static error(ex: Error, sql: string, parameters?: Parameter[]) {
+    console.error("%cERROR: %s", "color: red", ex?.message);
+    console.error("---");
+    console.error(clean(sql));
+    console.error("---");
+    console.error(parameters);
   }
 }
 

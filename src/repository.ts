@@ -110,10 +110,10 @@ export class Repository<T extends Identifiable> {
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
   // Follow Loopback model (see https://loopback.io/doc/en/lb4/Querying-data.html)
   async find(filter: Filter<T>, debug = false): Promise<T[]> {
-    assert(typeof (filter) === "object" && !Array.isArray(filter), "Parameter 'where' must be an object");
-
     // If there is no filter, we are better off returning the results from all
     if (!filter) return this.all();
+
+    assert(typeof (filter) === "object" && !Array.isArray(filter), "Parameter 'where' must be an object");
 
     // Compute where clause
     const whereTree: Primitive[] = [];
