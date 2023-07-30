@@ -1,5 +1,16 @@
+import { getLogger, handlers, LogLevels } from "std/log/mod.ts";
 import { DB } from "../src/db.ts";
+import { DDL } from "../src/ddl.ts";
 import { Schema } from "../src/types.ts";
+
+// Make SURE we print errors during the test
+const CONSOLE = new handlers.ConsoleHandler("DEBUG");
+
+for (const name of ["db", "repository"]) {
+  const logger = getLogger("dbx:" + name);
+  logger.level = LogLevels.INFO;
+  logger.handlers.push(CONSOLE);
+}
 
 export const sleep = function (time: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, time));
@@ -13,7 +24,8 @@ export async function dbInit(type: string, schemas: Schema[]) {
 
 export async function createTables(schemas: Schema[]) {
   for (const schema of schemas) {
-    await DB.createTable(schema, DB.type, true);
+    const sql = DDL.createTable(schema, DB.type);
+    await DB.execute(sql);
   }
 }
 

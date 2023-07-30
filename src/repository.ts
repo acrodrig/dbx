@@ -1,4 +1,6 @@
-import { assert, EventEmitter, getLogger } from "./deps.ts";
+import { assert } from "std/assert/mod.ts";
+import { CustomEventTarget } from "base/mod.ts";
+import { getLogger } from "std/log/mod.ts";
 import { DB } from "./db.ts";
 import { Class, Condition, Filter, Identifiable, Order, Primitive, Schema, Where } from "./types.ts";
 
@@ -38,26 +40,21 @@ const Hook = {
   BEFORE_UPDATE: "before-update",
 } as const;
 
-// Needed for emitter
-const emitters = new Map<Class<unknown>, EventEmitter>();
-
 // Loopback like model
-export class Repository<T extends Identifiable> {
+export class Repository<T extends Identifiable> extends CustomEventTarget<T> {
   table: string;
   type: Class<T>;
   schema?: Schema;
-  emitter: EventEmitter;
 
   // Additional where condition to be added to ALL queries. It is very
   // useful to ensure for example access to only one's own account
   baseWhere?: Condition<T>;
 
   constructor(type: Class<T>, schema?: Schema, name?: string) {
+    super();
     this.type = type;
     this.schema = schema;
     this.table = name ?? schema?.name ?? type.name;
-    if (!emitters.has(type)) emitters.set(type, new EventEmitter());
-    this.emitter = emitters.get(type)!;
   }
 
   setBaseWhere(bc: Condition<T>): this {
@@ -101,9 +98,9 @@ export class Repository<T extends Identifiable> {
     const parameters = [id, ...whereTree];
     logger.debug({ method: "delete", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "delete", sql: clean(sql), parameters });
-    await this.emitter.emit(Hook.BEFORE_DELETE, this, id);
+    this.emit(Hook.BEFORE_DELETE, { id } as T);
     const result = await DB.execute(sql, parameters);
-    await this.emitter.emit(Hook.AFTER_DELETE, this, id);
+    this.emit(Hook.AFTER_DELETE, { id } as T);
     return result.affectedRows === 1;
   }
 
@@ -180,11 +177,11 @@ export class Repository<T extends Identifiable> {
     const parameters = [...values];
     logger.debug({ method: "insert", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "insert", sql: clean(sql), parameters });
-    await this.emitter.emit(Hook.BEFORE_INSERT, this, object);
+    this.emit(Hook.BEFORE_INSERT, object);
     const result = await DB.execute(sql, parameters as Primitive[]);
     if (!result.lastInsertId) logger.warning({ method: "insert", sql: clean(sql), warning: "Insert did produce a last inserted ID" });
     if (result.lastInsertId) object.id = result.lastInsertId;
-    await this.emitter.emit(Hook.AFTER_INSERT, this, object);
+    this.emit(Hook.AFTER_INSERT, object);
     return object;
   }
 
@@ -201,10 +198,10 @@ export class Repository<T extends Identifiable> {
     const parameters = [...Object.values(record), object.id, ...whereTree];
     logger.debug({ method: "update", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "update", sql: clean(sql), parameters });
-    await this.emitter.emit(Hook.BEFORE_UPDATE, this, object);
+    this.emit(Hook.BEFORE_UPDATE, object as T);
     const result = await DB.execute(sql, parameters as Primitive[]);
     if (result.lastInsertId) object.id = result.lastInsertId;
-    await this.emitter.emit(Hook.AFTER_UPDATE, this, object);
+    this.emit(Hook.AFTER_UPDATE, object as T);
     if (result.affectedRows === 0) logger.warning({ method: "update", sql: clean(sql), warning: "Update had no affected rows" });
     if (result.affectedRows! > 1) logger.warning({ method: "update", sql: clean(sql), warning: "Update had more than one affected rows" });
     return result.affectedRows === 1 ? object as T : undefined;

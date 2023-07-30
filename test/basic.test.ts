@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno test -A --unstable --no-check
 
-import { assert, assertEquals, assertExists } from "./deps.ts";
+import { assert, assertEquals, assertExists } from "std/assert/mod.ts";
 import { Schema } from "../src/types.ts";
 import DB from "../src/db.ts";
 import AccountModel from "../resources/account.ts";

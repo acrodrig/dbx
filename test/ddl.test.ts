@@ -1,9 +1,9 @@
 #!/usr/bin/env -S deno test -A --no-check
 
-import { assertEquals } from "./deps.ts";
+import { assertEquals } from "std/assert/mod.ts";
 import { Schema } from "../src/types.ts";
-import DB from "../src/db.ts";
 import AccountSchema from "../resources/account.json" assert { type: "json" };
+import { DDL } from "../src/ddl.ts";
 
 // See https://github.com/denoland/deno_std/blob/main/testing/_diff_test.ts
 
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS TestAccount (
 `.trim();
 
 test("Table Creation MySQL", function () {
-  const ddl = DB.createTable(AccountSchema as Schema, "mysql", false, "TestAccount");
+  const ddl = DDL.createTable(AccountSchema as Schema, "mysql", "TestAccount");
   if (DEBUG) console.log(`\nMYSQL\n${HR}\n${ddl}\n\n`);
   assertEquals(ddl.trim(), MYSQL);
 });
@@ -64,7 +64,7 @@ CREATE INDEX IF NOT EXISTS TestAccount_valueList ON TestAccount (id,(CAST(valueL
 `.trim();
 
 test("Table Creation SQLite", function () {
-  const ddl = DB.createTable(AccountSchema as Schema, "sqlite", false, "TestAccount");
+  const ddl = DDL.createTable(AccountSchema as Schema, "sqlite", "TestAccount");
   if (DEBUG) console.log(`\nSQLite\n${HR}\n${ddl}\n\n`);
   assertEquals(ddl.trim(), SQLITE);
 });
@@ -95,7 +95,7 @@ CREATE INDEX IF NOT EXISTS TestAccount_valueList ON TestAccount (id,(CAST(valueL
 `.trim();
 
 test("Table Creation Postgres", function () {
-  const ddl = DB.createTable(AccountSchema as Schema, "postgres", false, "TestAccount");
+  const ddl = DDL.createTable(AccountSchema as Schema, "postgres", "TestAccount");
   if (DEBUG) console.log(`\nPostgres\n${HR}\n${ddl}\n\n`);
   assertEquals(ddl.trim(), POSTGRES);
 });

@@ -1,7 +1,6 @@
-import { getLogger } from "./deps.ts";
+import { getLogger } from "std/log/mod.ts";
 import { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
-import { DDL } from "./ddl.ts";
 
 // See https://github.com/eveningkid/denodb/blob/master/deps.ts
 import { Client as MySQLClient, configLogger } from "https://deno.land/x/mysql@v2.10.3/mod.ts";
@@ -45,7 +44,6 @@ export interface Client {
 
 export interface ClientConfig {
   type: string;
-
   charset?: string;
   database?: string;
   debug?: boolean;
@@ -183,7 +181,7 @@ export class DB {
     }
   }
 
-  static async execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug = false) {
+  static execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug = false) {
     // If values are not an array, they need to be transformed (as well as the SQL)
     const arrayParameters: Parameter[] = [];
     if (parameters && !Array.isArray(parameters)) {
@@ -204,19 +202,6 @@ export class DB {
       logger.error({ method: "execute", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
       throw ex;
     }
-  }
-
-  // Uses the most standard MySQL syntax and then it is fixed afterwards
-  static createTable(schema: Schema, type: string, execute?: false, nameOverride?: string): string;
-  static createTable(schema: Schema, type: string, execute?: true, nameOverride?: string): Promise<boolean>;
-  static createTable(schema: Schema, type = "mysql", execute = false, nameOverride?: string): string | Promise<boolean> {
-    const sql = DDL.createTable(schema, type, nameOverride);
-
-    // Execute?
-    if (!execute) return sql;
-
-    // Execute command and return OK
-    return DB.execute(sql) as Promise<boolean>;
   }
 
   static getRepository(tableName: string): Repository<any>;

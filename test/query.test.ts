@@ -1,10 +1,8 @@
 #!/usr/bin/env -S deno test -A --no-check
 
-import { assert, assertEquals, path } from "./deps.ts";
+import { assert, assertEquals } from "std/assert/mod.ts";
 import DB from "../src/db.ts";
 import { dbInit, getProvider } from "./helpers.ts";
-
-const __dirname = path.dirname(path.fromFileUrl(import.meta.url));
 
 const test = Deno.test;
 const options = { sanitizeResources: false, sanitizeOps: false };
@@ -13,7 +11,7 @@ const options = { sanitizeResources: false, sanitizeOps: false };
 
 await dbInit(getProvider(), []);
 
-const DATA = Deno.readTextFileSync(__dirname + "/../resources/data.sql");
+const DATA = Deno.readTextFileSync(new URL("../resources/data.sql", import.meta.url));
 
 const repo = await DB.getRepository("EMP");
 
