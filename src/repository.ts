@@ -106,7 +106,7 @@ export class Repository<T extends Identifiable> extends CustomEventTarget<T> {
 
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
   // Follow Loopback model (see https://loopback.io/doc/en/lb4/Querying-data.html)
-  async find(filter: Filter<T>, debug = false): Promise<T[]> {
+  async find(filter: Filter<T> = {}, debug = false): Promise<T[]> {
     // If there is no filter, we are better off returning the results from all
     if (!filter) return this.all();
 

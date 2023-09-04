@@ -1,4 +1,5 @@
 import { getLogger } from "std/log/mod.ts";
+import { DDL } from "./ddl.ts";
 import { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
 
@@ -202,6 +203,14 @@ export class DB {
       logger.error({ method: "execute", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
       throw ex;
     }
+  }
+
+  // Uses the most standard MySQL syntax and then it is fixed afterwards
+  // static createTable(schema: Schema, type: string, execute?: false, nameOverride?: string): string;
+  // static createTable(schema: Schema, type: string, execute?: true, nameOverride?: string): Promise<boolean>;
+  static createTable(schema: Schema, type = "mysql", nameOverride?: string) {
+    const sql = DDL.createTable(schema, type, nameOverride);
+    return DB.execute(sql);
   }
 
   static getRepository(tableName: string): Repository<any>;
