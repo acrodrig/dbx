@@ -205,7 +205,7 @@ export class DB {
     }
   }
 
-  // Uses the most standard MySQL syntax and then it is fixed afterwards
+  // Uses the most standard MySQL syntax, fixed it afterwards
   // static createTable(schema: Schema, type: string, execute?: false, nameOverride?: string): string;
   // static createTable(schema: Schema, type: string, execute?: true, nameOverride?: string): Promise<boolean>;
   static createTable(schema: Schema, type = "mysql", nameOverride?: string) {

@@ -1,5 +1,4 @@
 import { assert } from "std/assert/mod.ts";
-import { CustomEventTarget } from "base/mod.ts";
 import { getLogger } from "std/log/mod.ts";
 import { DB } from "./db.ts";
 import { Class, Condition, Filter, Identifiable, Order, Primitive, Schema, Where } from "./types.ts";
@@ -41,7 +40,7 @@ const Hook = {
 } as const;
 
 // Loopback like model
-export class Repository<T extends Identifiable> extends CustomEventTarget<T> {
+export class Repository<T extends Identifiable> extends EventTarget {
   table: string;
   type: Class<T>;
   schema?: Schema;
@@ -98,9 +97,9 @@ export class Repository<T extends Identifiable> extends CustomEventTarget<T> {
     const parameters = [id, ...whereTree];
     logger.debug({ method: "delete", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "delete", sql: clean(sql), parameters });
-    this.emit(Hook.BEFORE_DELETE, { id } as T);
+    this.dispatchEvent(new CustomEvent(Hook.BEFORE_DELETE, { detail: { id } }));
     const result = await DB.execute(sql, parameters);
-    this.emit(Hook.AFTER_DELETE, { id } as T);
+    this.dispatchEvent(new CustomEvent(Hook.AFTER_DELETE, { detail: { id } }));
     return result.affectedRows === 1;
   }
 
@@ -177,11 +176,11 @@ export class Repository<T extends Identifiable> extends CustomEventTarget<T> {
     const parameters = [...values];
     logger.debug({ method: "insert", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "insert", sql: clean(sql), parameters });
-    this.emit(Hook.BEFORE_INSERT, object);
+    this.dispatchEvent(new CustomEvent(Hook.BEFORE_INSERT, { detail: object }));
     const result = await DB.execute(sql, parameters as Primitive[]);
     if (!result.lastInsertId) logger.warning({ method: "insert", sql: clean(sql), warning: "Insert did produce a last inserted ID" });
     if (result.lastInsertId) object.id = result.lastInsertId;
-    this.emit(Hook.AFTER_INSERT, object);
+    this.dispatchEvent(new CustomEvent(Hook.AFTER_INSERT, { detail: object }));
     return object;
   }
 
@@ -198,10 +197,10 @@ export class Repository<T extends Identifiable> extends CustomEventTarget<T> {
     const parameters = [...Object.values(record), object.id, ...whereTree];
     logger.debug({ method: "update", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "update", sql: clean(sql), parameters });
-    this.emit(Hook.BEFORE_UPDATE, object as T);
+    this.dispatchEvent(new CustomEvent(Hook.BEFORE_UPDATE, { detail: object }));
     const result = await DB.execute(sql, parameters as Primitive[]);
     if (result.lastInsertId) object.id = result.lastInsertId;
-    this.emit(Hook.AFTER_UPDATE, object as T);
+    this.dispatchEvent(new CustomEvent(Hook.AFTER_UPDATE, { detail: object }));
     if (result.affectedRows === 0) logger.warning({ method: "update", sql: clean(sql), warning: "Update had no affected rows" });
     if (result.affectedRows! > 1) logger.warning({ method: "update", sql: clean(sql), warning: "Update had more than one affected rows" });
     return result.affectedRows === 1 ? object as T : undefined;
