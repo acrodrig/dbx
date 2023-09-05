@@ -1,6 +1,6 @@
 # DBX
 
-> 🚧 Alpha code (at best) for the moment. Please tread carefully.
+> 🚧 Beta code for the moment. Tread carefully.
 
 DBX is a simple, [Deno](https://deno.land/)-specific, minimalist library for accessing relational databases (MongoDB support 
 coming in the future). After years of working with Loopback, Knex, TypeORM and a short stop on DenoDB
@@ -16,7 +16,7 @@ I decided that things could be made simpler (yes, I [know how standards prolifer
 - Make good use of "newish" (or at least newly implemented in MYSQL) DB features such as constraint checks
 - Prefer [DataMapper](https://typeorm.io/active-record-data-mapper#what-is-the-data-mapper-pattern) to [ActiveRecord](https://typeorm.io/active-record-data-mapper#what-is-the-active-record-pattern) ("leave my classes alone")
 
-**✻** Shamelessly appropriated, no longer know from [whom](https://quoteinvestigator.com/2011/05/13/einstein-simple/).
+**✻** Shamelessly appropriated, don't know from [whom](https://quoteinvestigator.com/2011/05/13/einstein-simple/).
 
 
 ## Uses
@@ -146,7 +146,7 @@ import { DBX } from "https://deno.land/x/dbx/mod.ts";
 let counter = 0;
 const repo = await DB.getRepository(User);
 repo.on("after-insert", function () {
-    console.log(`Since server start, we have ${++counter} new users!)
+    console.log(`Since server started, we have ${++counter} new users!)
 });
 ```
 
@@ -182,12 +182,29 @@ deno test -A
 To test other DBs (for example MySQL) you can run:
 
 ```shell
-TEST_PROVIDER=MySQL deno test -A
+TEST_PROVIDER=mysql deno test -A
 ```
+
+
+## Tasks
+
+Tasks can be run via `deno task <task>`. Tasks below.
+
+| Name            | Description                                                             |
+|-----------------|-------------------------------------------------------------------------|
+| `check`         | Checks Typescript code and formatting. Should be done before releasing. |
+| `lint`            | Lints source code.                                                      |                     
+| `release`       | Releases the library. Invoked as `deno task release minor` for example  |                     
+| `test`          | Runs tests on top of a Memory embedded DB (SQLite)                      |                     
+| `test-mysql`    | Runs tests on top of a real MySQL instance via docker.                  |                     
+| `test-postgres` | Runs tests on top of a real Postgres instance via docker.               |                     
+
+To release a custom script [release.sh](https://gist.github.com/acrodrig/8ca32ed618fe7d6d82900c1242d2eeb0) is used (following guidelines on [Publishing Your Deno Modules using GitHub](https://blog.bitsrc.io/publishing-your-deno-modules-using-github-f2bd86173392))
 
 
 ## Roadmap
 
+- [ ] Add a slow query warning by default (and allow to configure it)
 - [ ] Write a more complete README that shows all the use cases
 - [ ] Add support for MongoDB (important given how many ORMs support it)
 - [ ] Add more tests and compute coverage (and publish it on README)

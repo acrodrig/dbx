@@ -12,6 +12,8 @@
   "tasks": {
     "check": "deno check **/*.ts && deno fmt --check",
     "lint": "deno lint src test",
-    "test": "deno test -A"
+    "test": "deno test -A",
+    "test-mysql": "./test-mysql.sh",
+    "test-postgres": "./test-postgres.sh"
   }
 }

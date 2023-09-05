@@ -213,6 +213,7 @@ export class DB {
     return DB.execute(sql);
   }
 
+  // deno-lint-ignore no-explicit-any
   static getRepository(tableName: string): Repository<any>;
   static getRepository<T extends Identifiable>(target: Class<T>): Repository<T>;
   static getRepository<T extends Identifiable>(target: string | Class<T>, schema?: Schema): Repository<T> {

@@ -219,6 +219,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
       else if (type === "boolean") record[n] = !!value;
       else if (type === "date" && (value as unknown) instanceof Date) record[n] = value;
       else if (type === "json") record[n] = JSON.stringify(value);
+      // deno-lint-ignore ban-types
       else if ((value as Object).constructor === Object) record[n] = JSON.stringify(value);
       else record[n] = value;
     });
@@ -280,7 +281,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
         expressions.push(value);
       } else if (key && op) {
         // Normal case
-        const explode = (op === operators.in || op === operators.nin);
+        const explode = op === operators.in || op === operators.nin;
         if (explode) tree.push(...value[key]);
         else tree.push(value[key]);
 

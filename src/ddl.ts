@@ -20,7 +20,7 @@ export class DDL {
     const namePad = Math.max(...Object.keys(schema.properties).map((n) => n.length || 0)) + 1;
 
     // Check with if type is SQLite since it is the most restrictive
-    const sqlite = (dbType === "sqlite"), postgres = (dbType === "postgres"), other = sqlite || postgres;
+    const sqlite = dbType === "sqlite", postgres = dbType === "postgres", other = sqlite || postgres;
 
     // Column generator
     const createColumn = function (name: string, column: Column, padWidth = DDL.padWidth, defaultWidth = DDL.defaultWidth): string {

@@ -1,14 +1,14 @@
 -- See https://resources.oreilly.com/examples/9780596009762
 
 CREATE TABLE Employees (
-    empno    INTEGER NOT NULL,
-    ename    VARCHAR(10),
-    job      VARCHAR(9),
-    mgr      INTEGER,
-    hiredate DATE,
-    sal      INTEGER,
-    comm     INTEGER,
-    deptno   INTEGER
+    id         INTEGER NOT NULL,
+    name       VARCHAR(10),
+    job        VARCHAR(9),
+    manager    INTEGER,
+    hiredate   DATE,
+    salary     INTEGER,
+    commission INTEGER,
+    department INTEGER
 );
 
 INSERT INTO Employees VALUES (7369, 'SMITH',  'CLERK',     7902, '1980-12-17',  800, NULL, 20);
@@ -27,9 +27,9 @@ INSERT INTO Employees VALUES (7902, 'FORD',   'ANALYST',   7566, '1981-12-3',  3
 INSERT INTO Employees VALUES (7934, 'MILLER', 'CLERK',     7782, '1982-1-23',  1300, NULL, 10);
 
 CREATE TABLE Departments (
-    deptno INTEGER,
-    dname VARCHAR(14),
-    loc VARCHAR(13)
+    id       INTEGER,
+    name     VARCHAR(14),
+    location VARCHAR(13)
 );
 
 INSERT INTO Departments VALUES (10, 'ACCOUNTING', 'NEW YORK');
