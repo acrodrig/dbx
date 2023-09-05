@@ -13,11 +13,11 @@ creating the database to develop locally.
 mysql -u root -e "CREATE DATABASE dbx DEFAULT CHARACTER SET utf8mb4"
 
 # Create main user (password should change for production)
-mysql -u root -e "CREATE USER IF NOT EXISTS 'dbx'@'localhost';"
-mysql -u root -e "CREATE USER IF NOT EXISTS 'dbx'@'%';"
+mysql -u root -e "CREATE USER IF NOT EXISTS 'dbx'@'localhost'"
+mysql -u root -e "CREATE USER IF NOT EXISTS 'dbx'@'%'"
 
 # Grant on the main schema
-mysql -u root -e "GRANT ALL ON dbx.* TO 'dbx'@'localhost', 'dbx'@'%';"
+mysql -u root -e "GRANT ALL ON dbx.* TO 'dbx'@'localhost', 'dbx'@'%'"
 ```
 
 
@@ -33,8 +33,8 @@ export DB="dbx"
 psql -u root -e "CREATE DATABASE dbx"
 
 # Create main user (password should change for production)
-psql -u root -e "CREATE USER IF NOT EXISTS dbx;"
+psql -u root -e "CREATE USER IF NOT EXISTS dbx"
 
 # Grant on the main schema
-psql -u root -e "GRANT ALL ON ALL TABLES IN SCHEMA public TO dbx;"
+psql -u root -e "GRANT ALL ON ALL TABLES IN SCHEMA public TO dbx"
 ```

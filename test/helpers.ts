@@ -12,14 +12,19 @@ for (const name of ["db", "repository"]) {
   logger.handlers.push(CONSOLE);
 }
 
-export const sleep = function (time: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, time));
-};
-
 export async function dbInit(type: string, schemas: Schema[]) {
-  // If it is SQLite it will do an in-memory DB
-  await DB.connect({ type, database: type === "sqlite" ? ":memory:" : "dbx", username: "dbx" }, schemas);
+  // If it is SQLite, it will do an in-memory DB
+  const port = parseInt(Deno.env.get("TEST_PORT") ?? "3306");
+  const database = type === "sqlite" ? ":memory:" : "dbx";
+  await DB.connect({ type, hostname: "127.0.0.1", database, username: "dbx", port }, schemas);
   await createTables(schemas);
+}
+
+export async function dbExec(sql: string) {
+  for (const expr of sql.split(";")) {
+    if (expr.trim().length === 0) continue;
+    await DB.execute(expr);
+  }
 }
 
 export async function createTables(schemas: Schema[]) {
