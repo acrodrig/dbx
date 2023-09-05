@@ -25,7 +25,7 @@ I decided that things could be made simpler (yes, I [know how standards prolifer
 
 Quickly start using without schema/configuration:
 
-```ts
+```typescript
 import DB from "https://deno.land/x/dex/mod.ts";
 
 // Class will be stored in a table with an auto increment ID
@@ -107,7 +107,7 @@ An example schema:
 
 Regardless of the type of database (i.e. SQLite, Mysql, etc), the DDL is generated in the same way. See below:
 
-```ts
+```typescript
 import DB from "https://deno.land/x/dex/mod.ts";
 
 const ddl = DB.createTable(UserSchema, "mysql", false, "UserTable");
@@ -140,13 +140,13 @@ DBX (via the repository) will emit type-specific events, everytime an object is 
 
 Quick example:
 
-```ts
+```typescript
 import { DBX } from "https://deno.land/x/dbx/mod.ts";
 
 let counter = 0;
 const repo = await DB.getRepository(User);
 repo.on("after-insert", function () {
-    console.log(`Since server started, we have ${++counter} new users!)
+    console.log(`Since server started, we have ${++counter} new users!`)
 });
 ```
 
@@ -193,7 +193,7 @@ Tasks can be run via `deno task <task>`. Tasks below.
 | Name            | Description                                                             |
 |-----------------|-------------------------------------------------------------------------|
 | `check`         | Checks Typescript code and formatting. Should be done before releasing. |
-| `lint`            | Lints source code.                                                      |                     
+| `lint`          | Lints source code.                                                      |                     
 | `release`       | Releases the library. Invoked as `deno task release minor` for example  |                     
 | `test`          | Runs tests on top of a Memory embedded DB (SQLite)                      |                     
 | `test-mysql`    | Runs tests on top of a real MySQL instance via docker.                  |                     
