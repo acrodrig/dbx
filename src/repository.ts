@@ -76,7 +76,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     // If there is no filter, we are better off returning the results from all
     if (!where) throw new Error("Cannot perform unrestricted DELETE (with no WHERE clause)!");
 
-    assert(typeof (where) === "object" && !Array.isArray(where), "Parameter 'where' must be an object");
+    assert(typeof where === "object" && !Array.isArray(where), "Parameter 'where' must be an object");
 
     // Delete restricted to WHERE clause
     const whereTree: Primitive[] = [];
@@ -90,7 +90,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
   // https://dev.mysql.com/doc/refman/8.0/en/delete.html
   async deleteById(id: number, debug = false): Promise<boolean> {
-    assert(typeof (id) === "number" && Number.isInteger(id), "Parameter 'id' must be an integer");
+    assert(typeof id === "number" && Number.isInteger(id), "Parameter 'id' must be an integer");
 
     const whereTree: Primitive[] = [];
     const sql = `DELETE FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
@@ -109,7 +109,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     // If there is no filter, we are better off returning the results from all
     if (!filter) return this.all();
 
-    assert(typeof (filter) === "object" && !Array.isArray(filter), "Parameter 'where' must be an object");
+    assert(typeof filter === "object" && !Array.isArray(filter), "Parameter 'where' must be an object");
 
     // Compute where clause
     const whereTree: Primitive[] = [];
@@ -146,7 +146,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
   async findById(id: number, debug = false): Promise<T | undefined> {
-    assert(typeof (id) === "number" && Number.isInteger(id), "Parameter 'id' must be an integer");
+    assert(typeof id === "number" && Number.isInteger(id), "Parameter 'id' must be an integer");
 
     const whereTree: Primitive[] = [];
     const sql = `SELECT * FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
@@ -167,7 +167,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
   // https://dev.mysql.com/doc/refman/8.0/en/insert.html
   async insert(object: T, debug = false): Promise<T> {
-    assert(typeof (object) === "object" && !Array.isArray(object), "Parameter 'object' must be an object");
+    assert(typeof object === "object" && !Array.isArray(object), "Parameter 'object' must be an object");
 
     const record = this.toRecord(object);
     const names = Object.keys(record), values = Object.values(record);
@@ -186,7 +186,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
   // https://dev.mysql.com/doc/refman/8.0/en/update.html
   async update(object: Partial<T>, debug = false): Promise<T | undefined> {
-    assert(typeof (object) === "object" && !Array.isArray(object), "Parameter 'object' must be an object");
+    assert(typeof object === "object" && !Array.isArray(object), "Parameter 'object' must be an object");
     assert(typeof (object.id) === "number" && Number.isInteger(object.id), "Parameter 'id' must be an integer");
 
     const record = this.toRecord(object);
@@ -214,7 +214,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
       if (column && (column.readOnly || column.asExpression || column.dateOn)) return;
       const type = column?.type;
       const value = object[n as keyof typeof object];
-      if (typeof (value) === "undefined") return;
+      if (typeof value === "undefined") return;
       else if (value === null) record[n] = null;
       else if (type === "boolean") record[n] = !!value;
       else if (type === "date" && (value as unknown) instanceof Date) record[n] = value;
@@ -232,12 +232,12 @@ export class Repository<T extends Identifiable> extends EventTarget {
     names.forEach((n) => {
       const type = columns?.[n]?.type;
       const value = record[n];
-      if (typeof (value) === "undefined") return;
+      if (typeof value === "undefined") return;
       else if (value === null) object[n] = null;
       else if (type === "boolean") object[n] = !!value;
       else if (type === "date") object[n] = new Date(value as string);
-      else if (type === "json") object[n] = typeof (value) === "string" ? JSON.parse(value) : value;
-      else if (typeof (value) === "string" && value.startsWith("{") && value.endsWith("}")) object[n] = JSON.parse(value as string);
+      else if (type === "json") object[n] = typeof value === "string" ? JSON.parse(value) : value;
+      else if (typeof value === "string" && value.startsWith("{") && value.endsWith("}")) object[n] = JSON.parse(value as string);
       else object[n] = value;
     });
     return object as T;

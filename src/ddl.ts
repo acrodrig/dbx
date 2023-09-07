@@ -69,7 +69,7 @@ export class DDL {
 
     // Constraint generator
     const createConstraint = function (parent: string, constraint: Constraint, padWidth = 4): string {
-      const pad = "".padEnd(padWidth), simple = typeof (constraint) === "string";
+      const pad = "".padEnd(padWidth), simple = typeof constraint === "string";
       const name = simple ? undefined : (parent + "_" + constraint.name).toLowerCase();
       const expr = simple ? constraint : constraint.check;
       return `${pad}${name ? "CONSTRAINT " + name + " " : ""}CHECK (${expr}),\n`;

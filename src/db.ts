@@ -217,7 +217,7 @@ export class DB {
   static getRepository(tableName: string): Repository<any>;
   static getRepository<T extends Identifiable>(target: Class<T>): Repository<T>;
   static getRepository<T extends Identifiable>(target: string | Class<T>, schema?: Schema): Repository<T> {
-    if (typeof (target) !== "string") return new Repository(target, schema ?? DB.schemas.get(target.name));
+    if (typeof target !== "string") return new Repository(target, schema ?? DB.schemas.get(target.name));
     return new Repository(Object as unknown as Class<T>, undefined, target);
   }
 
