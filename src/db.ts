@@ -205,12 +205,14 @@ export class DB {
     }
   }
 
-  // Uses the most standard MySQL syntax, fixed it afterwards
-  // static createTable(schema: Schema, type: string, execute?: false, nameOverride?: string): string;
-  // static createTable(schema: Schema, type: string, execute?: true, nameOverride?: string): Promise<boolean>;
-  static createTable(schema: Schema, type = "mysql", nameOverride?: string) {
+  // Uses the most standard MySQL syntax, modifies for other DBs inflight
+  static createTable(schema: Schema, type: string, execute: false, nameOverride?: string): Promise<string>;
+  static createTable(schema: Schema, type: string, execute: true, nameOverride?: string): Promise<boolean>;
+  static async createTable(schema: Schema, type = "mysql", execute = true, nameOverride?: string): Promise<string | boolean> {
     const sql = DDL.createTable(schema, type, nameOverride);
-    return DB.execute(sql);
+    if (!execute) return Promise.resolve(sql);
+    await DB.execute(sql);
+    return true;
   }
 
   // deno-lint-ignore no-explicit-any
