@@ -62,6 +62,7 @@ async function connect(config: ClientConfig): Promise<Client> {
   if (config.type === Provider.MYSQL) {
     if (!config.debug) await configLogger({ enable: false });
     config = Object.assign(config, { db: config.database });
+    if (!config.charset) config.charset = "utf8mb4";
     const nativeClient = await new MySQLClient().connect(config);
     return new class implements Client {
       type = config.type;

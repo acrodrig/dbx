@@ -125,12 +125,11 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
     // Build SQL (if there is a select, clean it to prevent SQL injection)
     const sql = `
-            SELECT ${select.length ? select.map((c) => c.replace(/[^a-zA-Z0-9_]/g, "")).join(",") : "*"}
-            FROM ${this.table}
-            WHERE ${Repository._where({ ...where, ...this.baseWhere }, whereTree, fullTextColumns)}
-            ORDER BY ${Repository._order(filter.order) || "NULL"}
-            LIMIT ? OFFSET ?
-        `;
+      SELECT ${select.length ? select.map((c) => c.replace(/[^a-zA-Z0-9_]/g, "")).join(",") : "*"}
+      FROM ${this.table}
+      WHERE ${Repository._where({ ...where, ...this.baseWhere }, whereTree, fullTextColumns)}
+      ORDER BY ${Repository._order(filter.order) || "NULL"}
+      LIMIT ? OFFSET ?`;
 
     // Build parameters
     const parameters = [...whereTree, limit, offset];
