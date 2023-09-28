@@ -8,8 +8,6 @@ import { Client as MySQLClient, configLogger } from "https://deno.land/x/mysql@v
 import { DB as SQLiteClient, QueryParameterSet } from "https://deno.land/x/sqlite@v3.4.0/mod.ts";
 import { Pool as PostgresClient } from "https://deno.land/x/postgres@v0.16.1/mod.ts";
 
-const logger = getLogger("dbx:db");
-
 const TTY = Deno.isatty(Deno.stderr.rid);
 
 // See https://stackoverflow.com/questions/49285864/is-there-a-valueof-similar-to-keyof-in-typescript
@@ -170,7 +168,7 @@ export class DB {
     }
     if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
-    logger.debug({ method: "query", sql: clean(sql), parameters });
+    getLogger("dbx").debug({ method: "query", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "query", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
@@ -179,7 +177,7 @@ export class DB {
       return await DB.client.query(DB._sqlFilter(sql), parameters);
     } catch (ex) {
       if (TTY) DB.error(ex, sql, parameters);
-      logger.error({ method: "query", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
+      getLogger("dbx").error({ method: "query", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
       throw ex;
     }
   }
@@ -193,7 +191,7 @@ export class DB {
     }
     if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
-    logger.debug({ method: "execute", sql: clean(sql), parameters });
+    getLogger("dbx").debug({ method: "execute", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "execute", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
@@ -202,7 +200,7 @@ export class DB {
       return DB.client.execute(DB._sqlFilter(sql), parameters);
     } catch (ex) {
       if (TTY) DB.error(ex, sql, parameters);
-      logger.error({ method: "execute", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
+      getLogger("dbx").error({ method: "execute", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
       throw ex;
     }
   }

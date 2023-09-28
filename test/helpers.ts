@@ -1,16 +1,12 @@
-import { getLogger, handlers, LogLevels } from "std/log/mod.ts";
+import { getLogger, handlers, setup } from "std/log/mod.ts";
 import { DB } from "../src/db.ts";
 import { DDL } from "../src/ddl.ts";
 import { Schema } from "../src/types.ts";
 
-// Make SURE we print errors during the test
-const CONSOLE = new handlers.ConsoleHandler("DEBUG");
-
-for (const name of ["db", "repository"]) {
-  const logger = getLogger("dbx:" + name);
-  logger.level = LogLevels.INFO;
-  logger.handlers.push(CONSOLE);
-}
+setup({
+  handlers: { console: new handlers.ConsoleHandler("DEBUG") },
+  loggers: { dbx: { level: "INFO", handlers: ["console"] } },
+});
 
 export async function dbInit(type: string, schemas: Schema[]) {
   // If it is SQLite, it will do an in-memory DB

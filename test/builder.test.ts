@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno test -A --no-check
 
-import { assertEquals } from "std/assert/mod.ts";
+import { assertEquals, assertThrows } from "std/assert/mod.ts";
 import { Repository } from "../src/repository.ts";
 import DB from "../src/db.ts";
 
@@ -28,8 +28,9 @@ test("Test _transformParameters", function () {
   assertEquals(array, [1, 2, 1, 2]);
 
   // Missing parameter(s)
-  assertEquals(transformParameters("WHERE a = :a AND b = :b", { a: 1 }, array = []), "WHERE a = ? AND b = ?");
+  assertEquals(transformParameters("WHERE a = :a AND b = :b", { a: 1 }, array = [], true), "WHERE a = ? AND b = ?");
   assertEquals(array, [1, undefined]);
+  assertThrows(() => transformParameters("WHERE a = :a AND b = :b", { a: 1 }, array = [], false), Error);
 
   // Too many parameter(s)
   assertEquals(transformParameters("WHERE a = :a AND b = :b", { a: 1, b: 2, c: 3 }, array = []), "WHERE a = ? AND b = ?");
