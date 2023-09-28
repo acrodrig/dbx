@@ -141,14 +141,15 @@ export class DB {
   }
 
   // Transforms parameters (and SQL) into array-like and references via `?`
-  static _transformParameters(sql: string, objectParameters: { [key: string]: unknown }, arrayParameters: unknown[]): string {
+  static _transformParameters(sql: string, objectParameters: { [key: string]: unknown }, arrayParameters: unknown[], safe?: boolean): string {
     arrayParameters.splice(0, arrayParameters.length);
     return sql.replace(/[:][$A-Z_][0-9A-Z_$]*/ig, function (name) {
       const value = objectParameters[name.substring(1)];
+      if (value === undefined && !safe) throw new Error("Undefined parameter '" + name + "'");
       const isArray = Array.isArray(value);
       // If it is an array we need to repeat N times the '?' and append all the values
       if (isArray) arrayParameters.push(...value);
-      else arrayParameters.push(value ?? undefined);
+      else arrayParameters.push(value);
       return isArray ? value.map((_) => "?").join(",") : "?";
     });
   }
