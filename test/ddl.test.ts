@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS TestAccount (
     comments    VARCHAR(8192) COMMENT 'General comments. Can be used for anything useful related to the instance.',
     country     VARCHAR(16) NOT NULL DEFAULT 'US' COMMENT 'Country code',
     email       VARCHAR(128) UNIQUE COMMENT 'Main email to communicate for that account',
-    established DATETIME(3) COMMENT 'Date on which the account was established',
+    established DATETIME(6) COMMENT 'Date on which the account was established',
     enabled     BOOLEAN NOT NULL DEFAULT true COMMENT 'Whether it is enabled or not. Disabled instances will not be used.',
     externalId  VARCHAR(512) UNIQUE COMMENT 'External unique ID, used to refer to external accounts',
     phone       VARCHAR(128) COMMENT 'Handle associated with the account',

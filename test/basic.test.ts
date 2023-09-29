@@ -61,8 +61,6 @@ test("Boolean Values", options, async function () {
 });
 
 test("DateTime Values", options, async function () {
-  // Milliseconds are preserved - except for MySQL :(
-  if (DB.type === "mysql") return;
   const account = await repo.findOne({});
   assertEquals(account!.established.getMilliseconds(), 123);
 });
