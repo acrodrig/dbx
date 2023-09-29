@@ -12,6 +12,7 @@ const dataTypes = {
 
 export class DDL {
   static padWidth = 4;
+  static milliPrecision = 3;
   static defaultWidth = 256;
 
   // Uses the most standard MySQL syntax and then it is fixed afterwards
@@ -30,7 +31,7 @@ export class DDL {
       const pad = "".padEnd(padWidth);
       const type = dataTypes[column.type as keyof typeof dataTypes];
       const autoIncrement = column.primaryKey && column.type === "integer";
-      const length = type.endsWith("CHAR") ? "(" + (column.maxLength || defaultWidth) + ")" : "";
+      const length = column.maxLength && (type.endsWith("CHAR") || !other) ? "(" + (column.maxLength ?? defaultWidth) + ")" : "";
       const nullable = column.primaryKey || column.required ? " NOT NULL" : "";
       const gen = autoIncrement ? (sqlite ? " AUTOINCREMENT" : " AUTO_INCREMENT") : "";
       const asExpression = column.asExpression && (typeof column.asExpression === "string" ? DB._sqlFilter(column.asExpression) : column.asExpression[dbType]);

@@ -9,7 +9,7 @@ Below is a pseudo-script that you can copy/paste to the command line to get star
 creating the database to develop locally.
 
 ```bash
-# Create 'main' database (should be called 'calvaire' in development)
+# Create 'dbx'
 mysql -u root -e "CREATE DATABASE dbx DEFAULT CHARACTER SET utf8mb4"
 
 # Create main user (password should change for production)
@@ -29,7 +29,7 @@ creating the database to develop locally.
 ```bash
 export DB="dbx"
 
-# Create 'main' database (should be called 'calvaire' in development)
+# Create 'dbx'
 psql -u root -e "CREATE DATABASE dbx"
 
 # Create main user (password should change for production)
