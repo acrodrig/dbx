@@ -3,6 +3,7 @@ export default class Account {
     comments?: string;
     country = "US";
     email?: string;
+    established = new Date();
     enabled = true;
     externalId?: string;
     name!: string;

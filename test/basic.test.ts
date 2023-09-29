@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno test -A --unstable --no-check
+#!/usr/bin/env -S deno test -A --unstable
 
 import { assert, assertEquals, assertExists } from "std/assert/mod.ts";
 import { Schema } from "../src/types.ts";
@@ -20,6 +20,9 @@ const repo = await DB.getRepository(AccountModel);
 
 test("Basic entity store/retrieve", options, async function () {
   let account = new AccountModel({ name: NAME });
+
+  // Make sure the account established date has milliseconds
+  account.established.setMilliseconds(123);
 
   // Save
   account = await repo.insert(account);
@@ -55,6 +58,12 @@ test("Retrieve via SQL query", options, async function () {
 test("Boolean Values", options, async function () {
   const accounts = await repo.find({ where: { name: "xyz", enabled: true } });
   assertEquals(accounts.length, 0);
+});
+
+test("DateTime Values", options, async function () {
+  const account = await repo.findOne({});
+  // Milliseconds are preserved
+  assertEquals(account!.established.getMilliseconds(), 123);
 });
 
 test("Full Text search", options, async function () {

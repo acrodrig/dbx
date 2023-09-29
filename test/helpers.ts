@@ -1,4 +1,4 @@
-import { getLogger, handlers, setup } from "std/log/mod.ts";
+import { handlers, setup } from "std/log/mod.ts";
 import { DB } from "../src/db.ts";
 import { DDL } from "../src/ddl.ts";
 import { Schema } from "../src/types.ts";
@@ -26,6 +26,8 @@ export async function dbExec(sql: string) {
 export async function createTables(schemas: Schema[]) {
   for (const schema of schemas) {
     const sql = DDL.createTable(schema, DB.type);
+    console.log("helpers.ts[29] sql", sql);
+
     await DB.execute(sql);
   }
 }

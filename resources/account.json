@@ -8,6 +8,7 @@
         "comments":    { "type": "string",  "required": false, "maxLength": 8192, "comment": "General comments. Can be used for anything useful related to the instance." },
         "country":     { "type": "string",  "required": true,  "maxLength": 16, "default": "'US'", "comment": "Country code" },
         "email":       { "type": "string",  "required": false, "maxLength": 128, "unique": true, "comment": "Main email to communicate for that account" },
+        "established": { "type": "date",    "required": false, "comment": "Date on which the account was established" },
         "enabled":     { "type": "boolean", "required": true,  "default": true, "comment": "Whether it is enabled or not. Disabled instances will not be used." },
         "externalId":  { "type": "string",  "required": false, "maxLength": 512, "unique": true, "comment": "External unique ID, used to refer to external accounts" },
         "phone":       { "type": "string",  "required": false, "maxLength": 128, "comment": "Handle associated with the account" },
