@@ -16,8 +16,7 @@ export async function dbInit(type: string, schemas: Schema[]) {
   try {
     await DB.connect({ type, hostname, database, username: "dbx", port }, schemas);
     await createTables(schemas);
-  }
-  catch (ex) {
+  } catch (ex) {
     console.error("\n❌ Could not connect to DB '" + type + "' using 'dbx@" + hostname + ":" + port + "'!");
     console.error("ERROR MESSAGE: " + ex.message + "");
     console.error("\nMake sure the user is created in the database (with NO password) and the DB is up\n");
