@@ -10,7 +10,7 @@
     "std/": "https://deno.land/std@0.203.0/"
   },
   "tasks": {
-    "check": "deno check **/*.ts && deno fmt --check",
+    "check": "deno check --unstable **/*.ts && deno fmt --check",
     "lint": "deno lint src test",
     "release": "release",
     "test": "deno test -A",
