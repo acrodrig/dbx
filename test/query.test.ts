@@ -1,7 +1,6 @@
 #!/usr/bin/env -S deno test -A --no-check
 
 import { assert, assertEquals } from "std/assert/mod.ts";
-import DB from "../src/db.ts";
 import { dbExec, dbInit, getProvider } from "./helpers.ts";
 
 const test = Deno.test;
@@ -9,7 +8,7 @@ const options = { sanitizeResources: false, sanitizeOps: false };
 
 // See https://lucy-kim.github.io/pages/learn-mySQL.html
 
-await dbInit(getProvider(), []);
+const DB = await dbInit(getProvider(), []);
 
 const DATA = Deno.readTextFileSync(new URL("../resources/data.sql", import.meta.url));
 

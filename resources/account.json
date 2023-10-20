@@ -12,7 +12,7 @@
         "enabled":     { "type": "boolean", "required": true,  "default": true, "comment": "Whether it is enabled or not. Disabled instances will not be used." },
         "externalId":  { "type": "string",  "required": false, "maxLength": 512, "unique": true, "comment": "External unique ID, used to refer to external accounts" },
         "phone":       { "type": "string",  "required": false, "maxLength": 128, "comment": "Handle associated with the account" },
-        "name":        { "type": "string",  "required": true,  "maxLength": 128, "unique": true, "comment": "Descriptive name to identify the instance" },
+        "name":        { "type": "string",  "required": true,  "unique": true, "comment": "Descriptive name to identify the instance" },
         "preferences": { "type": "json",    "required": true,  "default": { "wrap": true, "minAge": 18 }, "comment": "All the general options associated with the account." },
         "valueList":   { "type": "json",    "asExpression": "JSON_EXTRACT(preferences, '$.*')", "generatedType": "stored" }
     },

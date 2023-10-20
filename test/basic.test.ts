@@ -2,17 +2,16 @@
 
 import { assert, assertEquals, assertExists } from "std/assert/mod.ts";
 import { Schema } from "../src/types.ts";
-import DB from "../src/db.ts";
+import { dbInit, getProvider } from "./helpers.ts";
 import AccountModel from "../resources/account.ts";
 import AccountSchema from "../resources/account.json" assert { type: "json" };
-import { dbInit, getProvider } from "./helpers.ts";
 
 const test = Deno.test;
 const options = { sanitizeResources: false, sanitizeOps: false };
 
 const NAME = "Testing Account for QA Team";
 
-await dbInit(getProvider(), [AccountSchema as Schema]);
+const DB = await dbInit(getProvider(), [AccountSchema as Schema]);
 
 let id = -1;
 

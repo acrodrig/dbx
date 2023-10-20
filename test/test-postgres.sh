@@ -3,7 +3,10 @@
 PORT="15432"
 NAME="postgres"
 
-# Start a MySQL container on port 13306 with empty password
+# Is docker running?
+(docker info --format json | jq -e '.ServerVersion != null and .ServerVersion != ""') || { echo "❌ Docker is not running! Make sure it is up."; exit 1; }
+
+# Start a Postgres container on port 13306 with empty password
 echo -n "🛢️  Starting Database Container ... "
 docker run -p "$PORT":5432 -e POSTGRES_HOST_AUTH_METHOD="trust" --rm --name="$NAME" -d postgres:latest
 
