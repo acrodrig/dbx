@@ -42,6 +42,8 @@ export interface Index {
 
 export interface Relation {
   join: string;
+  delete?: "cascade" | "no-action" | "restrict" | "set-default" | "set-null";
+  update?: "cascade" | "no-action" | "restrict" | "set-default" | "set-null";
   target: string;
   type: "many-to-one" | "many-to-many";
 }

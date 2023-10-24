@@ -64,8 +64,10 @@ export class DDL {
     // Relation generator
     const createRelation = function (parent: string, name: string, relation: Relation, padWidth = 4): string {
       const pad = "".padEnd(padWidth);
+      const da = relation.delete ? " ON DELETE " + relation.delete?.toUpperCase().replace(/-/g, " ") : "";
+      const ua = relation.update ? " ON DELETE " + relation.update?.toUpperCase().replace(/-/g, " ") : "";
       name = (parent + "_" + name).toLowerCase();
-      return `${pad}CONSTRAINT ${name} FOREIGN KEY (${relation.join}) REFERENCES ${relation.target} (id),\n`;
+      return `${pad}CONSTRAINT ${name} FOREIGN KEY (${relation.join}) REFERENCES ${relation.target} (id)${da}${ua},\n`;
     };
 
     // Constraint generator
