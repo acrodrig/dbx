@@ -106,7 +106,7 @@ test("Table Creation Postgres", function () {
 });
 
 // Execute the table creation on the provided platform
-test.ignore("Actual Table", async function () {
+test("Actual Table", { ignore: true }, async function () {
   const provider = getProvider();
   const ddl = DDL.createTable(AccountSchema as Schema, provider, "TestAccount");
   console.log("ddl.test.ts[112] ➡️ ", ddl);
