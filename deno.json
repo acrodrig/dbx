@@ -9,6 +9,7 @@
     "sqlite/": "https://deno.land/x/sqlite@v3.8/",
     "std/": "https://deno.land/std@0.203.0/"
   },
+  "lock": false,
   "tasks": {
     "check": "deno check --unstable **/*.ts && deno fmt --check",
     "lint": "deno lint src test",
