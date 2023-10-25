@@ -1,8 +1,11 @@
 import { assert } from "std/assert/mod.ts";
 import { getLogger } from "std/log/mod.ts";
-import { LRUCacheWithDelete as LRU } from "mnemonist";
 import { DB } from "./db.ts";
 import { Class, Condition, Filter, Identifiable, Order, Primitive, Schema, Where } from "./types.ts";
+
+// Import direct version so that version plays well with other modules
+// TODO: Port mnemonist to deno land?
+import { LRUCacheWithDelete as LRU } from "npm:mnemonist@0.39.5";
 
 // Syntactic Sugar
 function join(label: string, count: number, separator = ","): string {
