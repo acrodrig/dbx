@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno test -A --unstable
+#!/usr/bin/env -S deno test -A --unstable --no-check
 
 import { assert, assertEquals, assertExists } from "std/assert/mod.ts";
 import { Schema } from "../src/types.ts";
@@ -16,6 +16,10 @@ const DB = await dbInit(getProvider(), [AccountSchema as Schema]);
 let id = -1;
 
 const repo = await DB.getRepository(AccountModel);
+
+test("Default repository has 1,000 capacity", options, async function () {
+  assertEquals(repo.capacity, DB.DEFAULT_CAPACITY);
+});
 
 test("Basic entity store/retrieve", options, async function () {
   let account = new AccountModel({ name: NAME });

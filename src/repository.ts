@@ -1,5 +1,6 @@
 import { assert } from "std/assert/mod.ts";
 import { getLogger } from "std/log/mod.ts";
+import { LRUCacheWithDelete as LRU } from "mnemonist";
 import { DB } from "./db.ts";
 import { Class, Condition, Filter, Identifiable, Order, Primitive, Schema, Where } from "./types.ts";
 
@@ -42,16 +43,23 @@ export class Repository<T extends Identifiable> extends EventTarget {
   table: string;
   type: Class<T>;
   schema?: Schema;
+  #cache?: LRU<number, T>;
 
   // Additional where condition to be added to ALL queries. It is very
   // useful to ensure for example access to only one's own account
   baseWhere?: Condition<T>;
 
-  constructor(type: Class<T>, schema?: Schema, name?: string) {
+  constructor(type: Class<T>, schema?: Schema, name?: string, capacity = 0) {
     super();
     this.type = type;
     this.schema = schema;
     this.table = name ?? schema?.name ?? type.name;
+    if (capacity > 0) this.#cache = new LRU<number, T>(capacity);
+  }
+
+  // Getter for capacity
+  get capacity(): number {
+    return this.#cache?.capacity ?? 0;
   }
 
   setBaseWhere(bc: Condition<T>): this {
@@ -73,8 +81,10 @@ export class Repository<T extends Identifiable> extends EventTarget {
   async delete<T>(where: Where<T>, debug = false): Promise<number> {
     // If there is no filter, we are better off returning the results from all
     if (!where) throw new Error("Cannot perform unrestricted DELETE (with no WHERE clause)!");
-
     assert(typeof where === "object" && !Array.isArray(where), "Parameter 'where' must be an object");
+
+    // Clear cache
+    this.#cache?.clear();
 
     // Delete restricted to WHERE clause
     const whereTree: Primitive[] = [];
@@ -89,6 +99,9 @@ export class Repository<T extends Identifiable> extends EventTarget {
   // https://dev.mysql.com/doc/refman/8.0/en/delete.html
   async deleteById(id: number, debug = false): Promise<boolean> {
     assert(typeof id === "number" && Number.isInteger(id), "Parameter 'id' must be an integer");
+
+    // Clear cache entry
+    this.#cache?.delete(id);
 
     const whereTree: Primitive[] = [];
     const sql = `DELETE FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
@@ -145,6 +158,9 @@ export class Repository<T extends Identifiable> extends EventTarget {
   async findById(id: number, debug = false): Promise<T | undefined> {
     assert(typeof id === "number" && Number.isInteger(id), "Parameter 'id' must be an integer");
 
+    // Chech cache
+    if (this.#cache?.has(id)) return this.#cache.get(id)!;
+
     const whereTree: Primitive[] = [];
     const sql = `SELECT * FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
     const parameters = [id, ...whereTree];
@@ -153,7 +169,9 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const records = await DB.query(sql, parameters);
     const record = records.pop();
     if (!record) return undefined;
-    return this.fromRecord(record, new this.type());
+    const object = this.fromRecord(record, new this.type());
+    this.#cache?.set(id, object);
+    return object;
   }
 
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
@@ -185,6 +203,9 @@ export class Repository<T extends Identifiable> extends EventTarget {
   async update(object: Partial<T>, debug = false): Promise<T | undefined> {
     assert(typeof object === "object" && !Array.isArray(object), "Parameter 'object' must be an object");
     assert(typeof (object.id) === "number" && Number.isInteger(object.id), "Parameter 'id' must be an integer");
+
+    // Clear cache entry
+    this.#cache?.delete(object.id);
 
     const record = this.toRecord(object);
     delete record.id;

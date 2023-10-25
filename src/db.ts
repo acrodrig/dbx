@@ -43,6 +43,7 @@ export interface Client {
 
 export interface ClientConfig {
   type: string;
+  cache?: number;
   charset?: string;
   database?: string;
   debug?: boolean;
@@ -114,6 +115,7 @@ async function connect(config: ClientConfig): Promise<Client> {
 }
 
 export class DB {
+  static DEFAULT_CAPACITY = 1000;
   static Hook = Hook;
   static Provider = Provider;
   static readonly ALL = Number.MAX_SAFE_INTEGER;
@@ -121,6 +123,7 @@ export class DB {
   static client: Client;
   static schemas = new Map<string, Schema>();
   static type: string = Provider.MYSQL;
+  static defaultCapacity = this.DEFAULT_CAPACITY;
 
   // Mainly for debugging/tests (useful for SQLite)
   static _sqlFilter = function (sql: string): string {
@@ -128,6 +131,10 @@ export class DB {
   };
 
   static async connect(config: ClientConfig, schemas?: Schema[]): Promise<Client> {
+    // By default, we add a cache
+    if (typeof config.cache !== "undefined") this.defaultCapacity = config.cache;
+
+    // Iterate over the schemas
     schemas?.forEach((s) => DB.schemas.set(s.name, s));
     if (DB.client) return Promise.resolve(DB.client);
     DB.type = config.type;
@@ -215,12 +222,24 @@ export class DB {
     return true;
   }
 
+  // Repository cache
+  static repositories = new Map<string | Class<Identifiable>, Repository<Identifiable>>();
+
   // deno-lint-ignore no-explicit-any
   static getRepository(tableName: string): Repository<any>;
   static getRepository<T extends Identifiable>(target: Class<T>): Repository<T>;
   static getRepository<T extends Identifiable>(target: string | Class<T>, schema?: Schema): Repository<T> {
-    if (typeof target !== "string") return new Repository(target, schema ?? DB.schemas.get(target.name));
-    return new Repository(Object as unknown as Class<T>, undefined, target);
+    let repository = this.repositories.get(target) as Repository<T>;
+    if (repository) return repository;
+
+    // Figure out target, schema and name
+    const name = typeof target === "string" ? target : target.name;
+    if (typeof target === "string") target = Object as unknown as Class<T>;
+    repository = new Repository(target, schema ?? DB.schemas.get(name), name, this.defaultCapacity);
+    this.repositories.set(target, repository as Repository<Identifiable>);
+
+    // Return repository
+    return repository;
   }
 
   static error(ex: Error, sql: string, parameters?: Parameter[]) {
