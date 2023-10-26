@@ -46,7 +46,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
   table: string;
   type: Class<T>;
   schema?: Schema;
-  #cache?: LRU<number, T>;
+  #cache?: LRU<number | string, T>;
 
   // Additional where condition to be added to ALL queries. It is very
   // useful to ensure for example access to only one's own account
@@ -100,7 +100,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
   }
 
   // https://dev.mysql.com/doc/refman/8.0/en/delete.html
-  async deleteById(id: number, debug = false): Promise<boolean> {
+  async deleteById(id: number | string, debug = false): Promise<boolean> {
     assert(typeof id === "number" && Number.isInteger(id), "Parameter 'id' must be an integer");
 
     // Clear cache entry
@@ -158,10 +158,10 @@ export class Repository<T extends Identifiable> extends EventTarget {
   }
 
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
-  async findById(id: number, debug = false): Promise<T | undefined> {
+  async findById(id: number | string, debug = false): Promise<T | undefined> {
     assert(typeof id === "number" && Number.isInteger(id), "Parameter 'id' must be an integer");
 
-    // Chech cache
+    // Check cache
     if (this.#cache?.has(id)) return this.#cache.get(id)!;
 
     const whereTree: Primitive[] = [];
@@ -180,7 +180,15 @@ export class Repository<T extends Identifiable> extends EventTarget {
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
   async findOne(filter: Filter<T> = {}, debug = false): Promise<T | undefined> {
     filter.limit = 1;
-    return (await this.find(filter, debug)).pop();
+
+    // Check cache
+    const key = JSON.stringify(filter);
+    if (this.#cache?.has(key)) return this.#cache.get(key)!;
+
+    // Fetch object and return
+    const object = (await this.find(filter, debug)).pop();
+    this.#cache?.set(key, object as T);
+    return object;
   }
 
   // https://dev.mysql.com/doc/refman/8.0/en/insert.html

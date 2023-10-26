@@ -4,7 +4,7 @@ export type Parameter = Primitive | bigint[] | boolean[] | Date[] | number[] | s
 
 export type Class<T> = { new (): T };
 export type Row = { [key in string]?: unknown };
-export type Identifiable = { id?: number };
+export type Identifiable = { id?: number | string };
 
 // JSON Schema Property
 export interface Property {
