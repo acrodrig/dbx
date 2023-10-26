@@ -253,6 +253,11 @@ export class Repository<T extends Identifiable> extends EventTarget {
     return result.affectedRows === 1 ? object as T : undefined;
   }
 
+  // https://dev.mysql.com/doc/refman/8.0/en/update.html
+  updateById(id: number | string, object: Partial<T>, debug = false): Promise<T | undefined> {
+    return this.update({ ...object, id }, debug);
+  }
+
   toRecord(object: Partial<T>, record: Record<string, unknown> = {}): Record<string, unknown> {
     const columns = this.schema?.properties;
     const names = Object.keys(columns ?? object);
