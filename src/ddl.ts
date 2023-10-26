@@ -10,10 +10,40 @@ const dataTypes = {
   string: "VARCHAR",
 };
 
+const _BaseSchema: DB.Schema = {
+  name: "_BaseSchema",
+  properties: {
+    id:         { type: "integer", required: true,  primaryKey: true, comment: "Unique identifier, auto-generated. It's the primary key." },
+    insertedAt: { type: "date",    required: false, dateOn: "insert", comment: "Timestamp when current record is inserted" },
+    updatedAt:  { type: "date",    required: false, dateOn: "update", comment: "Timestamp when current record is updated" },
+    etag:       { type: "string",  required: false, maxLength: 1024, comment: "Possible ETag for all resources that are external. Allows for better synch-ing." },
+  },
+  indices: [
+    { name: "insertedAt", properties: ["insertedAt"] },
+    { name: "updatedAt", properties: ["updatedAt"] },
+  ],
+};
+
 export class DDL {
   static padWidth = 4;
   static milliPrecision = 3;
   static defaultWidth = 256;
+
+  // Enhance schema with standard properties
+  static enhanceSchema(schema: Schema, selected: string[] = ["id", "insertedAt", "updatedAt"]): Schema {
+    // Select properties that match the selected columns and add them to the schema
+    if (!schema.properties) schema.properties = {};
+    for (const name of selected) schema.properties[name] = _BaseSchema.properties[name];
+
+    // Select indices
+    if (!schema.indices) schema.indices = [];
+    for (const name of selected) {
+      const index = _BaseSchema.indices?.find((i) => i.name === name);
+      if (index) schema.indices.push(index);
+    }
+
+    return schema;
+  }
 
   // Column generator
   static createColumn(dbType: string, name: string, column: Column, namePad: number, padWidth = DDL.padWidth, defaultWidth = DDL.defaultWidth): string {
