@@ -83,6 +83,11 @@ test("Query with raw SQL", options, async function () {
   assertEquals(accounts.length, 1);
 });
 
+test("Count via where", options, async function () {
+  assertEquals(await repo.count({ name: NAME }), 1);
+  assertEquals(await repo.count({ name: "XYZ" }), 0);
+});
+
 test("Find by ID and update", options, async function () {
   const comments = "Updating comment!";
 

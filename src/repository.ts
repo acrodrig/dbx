@@ -80,6 +80,28 @@ export class Repository<T extends Identifiable> extends EventTarget {
     return records.map((r: Record<string, unknown>) => this.fromRecord(r, new this.type()));
   }
 
+  // https://dev.mysql.com/doc/refman/8.0/en/select.html
+  // Follow Loopback model (see https://loopback.io/doc/en/lb4/Querying-data.html)
+  async count(where: Where<T> = {}, debug = false): Promise<number> {
+    assert(typeof where === "object" && !Array.isArray(where), "Parameter 'where' must be an object");
+
+    // Compute where clause
+    const whereTree: Primitive[] = [];
+
+    // Build SQL (if there is a select, clean it to prevent SQL injection)
+    const _where = Repository._where({ ...where, ...this.baseWhere }, whereTree);
+    const parameters = [...whereTree];
+    const sql = `SELECT COUNT(1) AS count FROM ${this.table} WHERE ${_where}`;
+
+    getLogger("dbx").debug({ method: "count", sql: clean(sql), parameters });
+    if (debug) console.debug({ method: "count", sql: clean(sql), parameters });
+    // console.log("SQL", clean(sql));
+
+    // Run query
+    const records = await DB.query(sql, parameters);
+    return records.pop()!.count as number;
+  }
+
   // https://dev.mysql.com/doc/refman/8.0/en/delete.html
   async delete<T>(where: Where<T>, debug = false): Promise<number> {
     // If there is no filter, we are better off returning the results from all
@@ -123,7 +145,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     // If there is no filter, we are better off returning the results from all
     if (!filter) return this.all();
 
-    assert(typeof filter === "object" && !Array.isArray(filter), "Parameter 'where' must be an object");
+    assert(typeof filter === "object" && !Array.isArray(filter), "Parameter 'filter' must be an object");
 
     // Compute where clause
     const whereTree: Primitive[] = [];
@@ -138,15 +160,11 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const fullTextColumns = DB.type === "mysql" ? this.schema?.indices?.find((i) => i.fulltext)?.properties : undefined;
 
     // Build SQL (if there is a select, clean it to prevent SQL injection)
-    const sql = `
-      SELECT ${select.length ? select.map((c) => c.replace(/[^a-zA-Z0-9_]/g, "")).join(",") : "*"}
-      FROM ${this.table}
-      WHERE ${Repository._where({ ...where, ...this.baseWhere }, whereTree, fullTextColumns)}
-      ORDER BY ${Repository._order(filter.order) || "NULL"}
-      LIMIT ? OFFSET ?`;
-
-    // Build parameters
+    const _select = select.length ? select.map((c) => c.replace(/[^a-zA-Z0-9_]/g, "")).join(",") : "*";
+    const _where = Repository._where({ ...where, ...this.baseWhere }, whereTree, fullTextColumns);
+    const _order = Repository._order(filter.order) || "NULL";
     const parameters = [...whereTree, limit, offset];
+    const sql = `SELECT ${_select} FROM ${this.table} WHERE ${_where} ORDER BY ${_order} LIMIT ? OFFSET ?`;
 
     getLogger("dbx").debug({ method: "find", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "find", sql: clean(sql), parameters });
