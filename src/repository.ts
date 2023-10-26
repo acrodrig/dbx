@@ -1,5 +1,4 @@
 import { assert } from "std/assert/mod.ts";
-import { getLogger } from "std/log/mod.ts";
 import { DB } from "./db.ts";
 import { Class, Condition, Filter, Identifiable, Order, Primitive, Schema, Where } from "./types.ts";
 
@@ -47,6 +46,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
   type: Class<T>;
   schema?: Schema;
   #cache?: LRU<number | string, T>;
+  #logger = DB.logger;
 
   // Additional where condition to be added to ALL queries. It is very
   // useful to ensure for example access to only one's own account
@@ -93,7 +93,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const parameters = [...whereTree];
     const sql = `SELECT COUNT(1) AS count FROM ${this.table} WHERE ${_where}`;
 
-    getLogger("dbx").debug({ method: "count", sql: clean(sql), parameters });
+    this.#logger.debug({ method: "count", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "count", sql: clean(sql), parameters });
     // console.log("SQL", clean(sql));
 
@@ -115,7 +115,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const whereTree: Primitive[] = [];
     const sql = `DELETE FROM ${this.table} WHERE ${Repository._where({ ...where, ...this.baseWhere }, whereTree)}`;
     const parameters = whereTree;
-    getLogger("dbx").debug({ method: "delete", sql: clean(sql), parameters });
+    this.#logger.debug({ method: "delete", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "delete", sql: clean(sql), parameters });
     const result = await DB.execute(sql, parameters);
     return result.affectedRows ?? -1;
@@ -131,7 +131,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const whereTree: Primitive[] = [];
     const sql = `DELETE FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
     const parameters = [id, ...whereTree];
-    getLogger("dbx").debug({ method: "delete", sql: clean(sql), parameters });
+    this.#logger.debug({ method: "delete", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "delete", sql: clean(sql), parameters });
     this.dispatchEvent(new CustomEvent(Hook.BEFORE_DELETE, { detail: { id } }));
     const result = await DB.execute(sql, parameters);
@@ -166,7 +166,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const parameters = [...whereTree, limit, offset];
     const sql = `SELECT ${_select} FROM ${this.table} WHERE ${_where} ORDER BY ${_order} LIMIT ? OFFSET ?`;
 
-    getLogger("dbx").debug({ method: "find", sql: clean(sql), parameters });
+    this.#logger.debug({ method: "find", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "find", sql: clean(sql), parameters });
     // console.log("SQL", clean(sql));
 
@@ -185,7 +185,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const whereTree: Primitive[] = [];
     const sql = `SELECT * FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
     const parameters = [id, ...whereTree];
-    getLogger("dbx").debug({ method: "findById", sql: clean(sql), parameters });
+    this.#logger.debug({ method: "findById", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "findById", sql: clean(sql), parameters });
     const records = await DB.query(sql, parameters);
     const record = records.pop();
@@ -218,11 +218,11 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const columns = names.map((name) => "" + CQ + name + CQ + "").join(",");
     const sql = `INSERT INTO ${this.table} (${columns}) VALUES (${join("?", names.length)})${DB.type === DB.Provider.POSTGRES ? " RETURNING id" : ""}`;
     const parameters = [...values];
-    getLogger("dbx").debug({ method: "insert", sql: clean(sql), parameters });
+    this.#logger.debug({ method: "insert", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "insert", sql: clean(sql), parameters });
     this.dispatchEvent(new CustomEvent(Hook.BEFORE_INSERT, { detail: object }));
     const result = await DB.execute(sql, parameters as Primitive[]);
-    if (!result.lastInsertId) getLogger("dbx").warning({ method: "insert", sql: clean(sql), warning: "Insert did produce a last inserted ID" });
+    if (!result.lastInsertId) this.#logger.warning({ method: "insert", sql: clean(sql), warning: "Insert did produce a last inserted ID" });
     if (result.lastInsertId) object.id = result.lastInsertId;
     this.dispatchEvent(new CustomEvent(Hook.AFTER_INSERT, { detail: object }));
     return object;
@@ -242,14 +242,14 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const columns = Object.keys(record).map((name) => "" + CQ + name + CQ + "=?").join(",");
     const sql = `UPDATE ${this.table} SET ${columns} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
     const parameters = [...Object.values(record), object.id, ...whereTree];
-    getLogger("dbx").debug({ method: "update", sql: clean(sql), parameters });
+    this.#logger.debug({ method: "update", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "update", sql: clean(sql), parameters });
     this.dispatchEvent(new CustomEvent(Hook.BEFORE_UPDATE, { detail: object }));
     const result = await DB.execute(sql, parameters as Primitive[]);
     if (result.lastInsertId) object.id = result.lastInsertId;
     this.dispatchEvent(new CustomEvent(Hook.AFTER_UPDATE, { detail: object }));
-    if (result.affectedRows === 0) getLogger("dbx").warning({ method: "update", sql: clean(sql), warning: "Update had no affected rows" });
-    if (result.affectedRows! > 1) getLogger("dbx").warning({ method: "update", sql: clean(sql), warning: "Update had more than one affected rows" });
+    if (result.affectedRows === 0) this.#logger.warning({ method: "update", sql: clean(sql), warning: "Update had no affected rows" });
+    if (result.affectedRows! > 1) this.#logger.warning({ method: "update", sql: clean(sql), warning: "Update had more than one affected rows" });
     return result.affectedRows === 1 ? object as T : undefined;
   }
 

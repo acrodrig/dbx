@@ -1,5 +1,5 @@
 import { blue, white } from "std/fmt/colors.ts";
-import { getLogger } from "std/log/mod.ts";
+import { getLogger, handlers } from "std/log/mod.ts";
 import { DDL } from "./ddl.ts";
 import { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
@@ -126,7 +126,20 @@ export class DB {
   static schemas = new Map<string, Schema>();
   static type: string = Provider.MYSQL;
   static quiet?: boolean;
-  static defaultCapacity = this.DEFAULT_CAPACITY;
+  static capacity = this.DEFAULT_CAPACITY;
+
+  static get logger() {
+    return this.mainLogger();
+  }
+
+  // Get parent logger and if the logger has not been set, it will add a handler and level
+  static mainLogger(autoInit = true) {
+    const logger = getLogger("gateways");
+    if (logger.levelName !== "NOTSET" || !autoInit) return logger;
+    logger.levelName = "INFO";
+    logger.handlers.push(new handlers.ConsoleHandler("DEBUG"));
+    return logger;
+  }
 
   // Mainly for debugging/tests (useful for SQLite)
   static _sqlFilter = function (sql: string): string {
@@ -135,10 +148,10 @@ export class DB {
 
   static async connect(config: ClientConfig, schemas?: Schema[]): Promise<Client> {
     // By default, we add a cache
-    if (typeof config.cache !== "undefined") this.defaultCapacity = config.cache;
+    this.capacity = (config.cache === undefined ? this.DEFAULT_CAPACITY : config.cache);
 
     // By default, print to stdout
-    if (typeof config.quiet !== "undefined") this.quiet =!Deno.isatty(Deno.stdout.rid);
+    this.quiet = (config.quiet === undefined ? !Deno.isatty(Deno.stdout.rid) : config.quiet);
 
     // Iterate over the schemas
     schemas?.forEach((s) => DB.schemas.set(s.name, s));
@@ -186,7 +199,7 @@ export class DB {
     }
     if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
-    getLogger("dbx").debug({ method: "query", sql: clean(sql), parameters });
+    this.logger.debug({ method: "query", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "query", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
@@ -195,7 +208,7 @@ export class DB {
       return await DB.client.query(DB._sqlFilter(sql), parameters);
     } catch (ex) {
       if (TTY) DB.error(ex, sql, parameters);
-      getLogger("dbx").error({ method: "query", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
+      this.logger.error({ method: "query", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
       throw ex;
     }
   }
@@ -209,7 +222,7 @@ export class DB {
     }
     if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
-    getLogger("dbx").debug({ method: "execute", sql: clean(sql), parameters });
+    this.logger.debug({ method: "execute", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "execute", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
@@ -218,7 +231,7 @@ export class DB {
       return DB.client.execute(DB._sqlFilter(sql), parameters);
     } catch (ex) {
       if (TTY) DB.error(ex, sql, parameters);
-      getLogger("dbx").error({ method: "execute", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
+      this.logger.error({ method: "execute", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
       throw ex;
     }
   }
@@ -246,7 +259,7 @@ export class DB {
     // Figure out target, schema and name
     const name = typeof target === "string" ? target : target.name;
     if (typeof target === "string") target = Object as unknown as Class<T>;
-    repository = new Repository(target, schema ?? DB.schemas.get(name), name, this.defaultCapacity);
+    repository = new Repository(target, schema ?? DB.schemas.get(name), name, this.capacity);
     this.repositories.set(target, repository as Repository<Identifiable>);
 
     // Return repository
@@ -284,6 +297,10 @@ class DebugClient implements Client {
     return result;
   }
   debug(sql: string, parameters: Parameter[], rows: number, start: number, indent = "", pad = 20) {
+    // The flag can be turned off programatically, so we test once more
+    if (DB.quiet) return;
+
+    // If the flag is ON will debug to console
     const time = ("(" + rows + " row" + (rows === 1 ? "" : "s") + " in " + (Date.now() - start) + "ms)");
     let i = 0;
     sql = sql.replace(/\?/g, () => blue(String(i < parameters.length ? parameters[i++] : "⚠️")));
