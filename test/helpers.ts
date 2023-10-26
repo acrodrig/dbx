@@ -17,7 +17,7 @@ export async function dbInit(type: string, schemas: Schema[]) {
   const port = parseInt(Deno.env.get("TEST_PORT") ?? "3306");
   const database = type === "sqlite" ? ":memory:" : "dbx";
   try {
-    await DB.connect({ type, hostname, database, username: "dbx", port }, schemas);
+    await DB.connect({ type, hostname, database, username: "dbx", port, quiet: true }, schemas);
     await createTables(schemas);
   } catch (ex) {
     console.error("\n❌ Could not connect to DB '" + type + "' using 'dbx@" + hostname + ":" + port + "'!");

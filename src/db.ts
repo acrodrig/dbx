@@ -1,3 +1,4 @@
+import { blue, white } from "std/fmt/colors.ts";
 import { getLogger } from "std/log/mod.ts";
 import { DDL } from "./ddl.ts";
 import { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
@@ -52,6 +53,7 @@ export interface ClientConfig {
   password?: string;
   poolSize?: number;
   port?: number;
+  quiet?: boolean;
   socketPath?: string;
   username?: string;
   timeout?: number;
@@ -123,6 +125,7 @@ export class DB {
   static client: Client;
   static schemas = new Map<string, Schema>();
   static type: string = Provider.MYSQL;
+  static quiet?: boolean;
   static defaultCapacity = this.DEFAULT_CAPACITY;
 
   // Mainly for debugging/tests (useful for SQLite)
@@ -134,11 +137,19 @@ export class DB {
     // By default, we add a cache
     if (typeof config.cache !== "undefined") this.defaultCapacity = config.cache;
 
+    // By default, print to stdout
+    if (typeof config.quiet !== "undefined") this.quiet =!Deno.isatty(Deno.stdout.rid);
+
     // Iterate over the schemas
     schemas?.forEach((s) => DB.schemas.set(s.name, s));
     if (DB.client) return Promise.resolve(DB.client);
     DB.type = config.type;
-    return DB.client = await connect(config);
+    DB.client = await connect(config);
+
+    // Should wrap in debugger?
+    if (!config.quiet) DB.client = new DebugClient(DB.client);
+
+    return DB.client;
   }
 
   static async disconnect(): Promise<void> {
@@ -250,6 +261,36 @@ export class DB {
     console.error(parameters);
   }
 }
+
+// Debug Client
+class DebugClient implements Client {
+  type: string;
+  constructor(private client: Client) {
+    this.type = client.type;
+  }
+  close(): Promise<void> {
+    return this.client.close();
+  }
+  async execute(sql: string, parameters?: Parameter[]): Promise<{ affectedRows?: number; lastInsertId?: number }> {
+    const start = Date.now();
+    const result = await this.client.execute(sql, parameters);
+    this.debug(sql, parameters ?? [], result.affectedRows ?? 0, start)
+    return result;
+  }
+  async query(sql: string, parameters?: Parameter[]): Promise<Row[]> {
+    const start = Date.now();
+    const result = await this.client.query(sql, parameters);
+    this.debug(sql, parameters ?? [], result.length ?? 0, start)
+    return result;
+  }
+  debug(sql: string, parameters: Parameter[], rows: number, start: number, indent = "", pad = 20) {
+    const time = ("(" + rows + " row" + (rows === 1 ? "" : "s") + " in " + (Date.now() - start) + "ms)");
+    let i = 0;
+    sql = sql.replace(/\?/g, () => blue(String(i < parameters.length ? parameters[i++] : "⚠️")));
+    console.debug(indent + "🛢️ " + white(time.padStart(pad)) + " -- " + sql);
+  }
+}
+
 
 type LocalClientConfig = ClientConfig;
 type LocalProvider = Provider;
