@@ -148,10 +148,10 @@ export class DB {
 
   static async connect(config: ClientConfig, schemas?: Schema[]): Promise<Client> {
     // By default, we add a cache
-    this.capacity = (config.cache === undefined ? this.DEFAULT_CAPACITY : config.cache);
+    this.capacity = config.cache === undefined ? this.DEFAULT_CAPACITY : config.cache;
 
     // By default, print to stdout
-    this.quiet = (config.quiet === undefined ? !Deno.isatty(Deno.stdout.rid) : config.quiet);
+    this.quiet = config.quiet === undefined ? !Deno.isatty(Deno.stdout.rid) : config.quiet;
 
     // Iterate over the schemas
     schemas?.forEach((s) => DB.schemas.set(s.name, s));
@@ -287,13 +287,13 @@ class DebugClient implements Client {
   async execute(sql: string, parameters?: Parameter[]): Promise<{ affectedRows?: number; lastInsertId?: number }> {
     const start = Date.now();
     const result = await this.client.execute(sql, parameters);
-    this.debug(sql, parameters ?? [], result.affectedRows ?? 0, start)
+    this.debug(sql, parameters ?? [], result.affectedRows ?? 0, start);
     return result;
   }
   async query(sql: string, parameters?: Parameter[]): Promise<Row[]> {
     const start = Date.now();
     const result = await this.client.query(sql, parameters);
-    this.debug(sql, parameters ?? [], result.length ?? 0, start)
+    this.debug(sql, parameters ?? [], result.length ?? 0, start);
     return result;
   }
   debug(sql: string, parameters: Parameter[], rows: number, start: number, indent = "", pad = 20) {
@@ -301,13 +301,12 @@ class DebugClient implements Client {
     if (DB.quiet) return;
 
     // If the flag is ON will debug to console
-    const time = ("(" + rows + " row" + (rows === 1 ? "" : "s") + " in " + (Date.now() - start) + "ms)");
+    const time = "(" + rows + " row" + (rows === 1 ? "" : "s") + " in " + (Date.now() - start) + "ms)";
     let i = 0;
     sql = sql.replace(/\?/g, () => blue(String(i < parameters.length ? parameters[i++] : "⚠️")));
-    console.debug(indent + "🛢️ " + white(time.padStart(pad)) + " -- " + sql);
+    console.debug(indent + "🛢️ " + white(time.padStart(pad)) + " " + sql);
   }
 }
-
 
 type LocalClientConfig = ClientConfig;
 type LocalProvider = Provider;
