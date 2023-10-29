@@ -13,10 +13,10 @@ const dataTypes = {
 const _BaseSchema: DB.Schema = {
   name: "_BaseSchema",
   properties: {
-    id:         { type: "integer", required: true,  primaryKey: true, comment: "Unique identifier, auto-generated. It's the primary key." },
-    insertedAt: { type: "date",    required: false, dateOn: "insert", comment: "Timestamp when current record is inserted" },
-    updatedAt:  { type: "date",    required: false, dateOn: "update", comment: "Timestamp when current record is updated" },
-    etag:       { type: "string",  required: false, maxLength: 1024, comment: "Possible ETag for all resources that are external. Allows for better synch-ing." },
+    id: { type: "integer", required: true, primaryKey: true, comment: "Unique identifier, auto-generated. It's the primary key." },
+    insertedAt: { type: "date", required: false, dateOn: "insert", comment: "Timestamp when current record is inserted" },
+    updatedAt: { type: "date", required: false, dateOn: "update", comment: "Timestamp when current record is updated" },
+    etag: { type: "string", required: false, maxLength: 1024, comment: "Possible ETag for all resources that are external. Allows for better synch-ing." },
   },
   indices: [
     { name: "insertedAt", properties: ["insertedAt"] },
