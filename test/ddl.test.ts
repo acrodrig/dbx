@@ -2,7 +2,7 @@
 
 import { assertEquals } from "std/assert/mod.ts";
 import { Schema } from "../src/types.ts";
-import AccountSchema from "../resources/account.json" assert { type: "json" };
+import AccountSchema from "../resources/account.json" with { type: "json" };
 import { DDL } from "../src/ddl.ts";
 import { dbInit, getProvider } from "./helpers.ts";
 

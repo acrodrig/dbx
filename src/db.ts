@@ -1,5 +1,5 @@
 import { blue, white } from "std/fmt/colors.ts";
-import { getLogger, handlers } from "std/log/mod.ts";
+import { ConsoleHandler, getLogger } from "std/log/mod.ts";
 import { DDL } from "./ddl.ts";
 import { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
@@ -9,7 +9,7 @@ import { Client as MySQLClient, configLogger } from "https://deno.land/x/mysql@v
 import { DB as SQLiteClient, QueryParameterSet } from "https://deno.land/x/sqlite@v3.4.0/mod.ts";
 import { Pool as PostgresClient } from "https://deno.land/x/postgres@v0.16.1/mod.ts";
 
-const TTY = Deno.isatty(Deno.stderr.rid);
+const TTY = Deno.stderr.isTerminal();
 
 // See https://stackoverflow.com/questions/49285864/is-there-a-valueof-similar-to-keyof-in-typescript
 type Values<T> = T[keyof T];
@@ -137,7 +137,7 @@ export class DB {
     const logger = getLogger("gateways");
     if (logger.levelName !== "NOTSET" || !autoInit) return logger;
     logger.levelName = "INFO";
-    logger.handlers.push(new handlers.ConsoleHandler("DEBUG"));
+    logger.handlers.push(new ConsoleHandler("DEBUG"));
     return logger;
   }
 
@@ -151,7 +151,7 @@ export class DB {
     this.capacity = config.cache === undefined ? this.DEFAULT_CAPACITY : config.cache;
 
     // By default, print to stdout
-    this.quiet = config.quiet === undefined ? !Deno.isatty(Deno.stdout.rid) : config.quiet;
+    this.quiet = config.quiet === undefined ? !Deno.stdout.isTerminal() : config.quiet;
 
     // Iterate over the schemas
     schemas?.forEach((s) => DB.schemas.set(s.name, s));

@@ -4,7 +4,7 @@ import { assert, assertEquals, assertExists } from "std/assert/mod.ts";
 import { Schema } from "../src/types.ts";
 import { dbInit, getProvider } from "./helpers.ts";
 import AccountModel from "../resources/account.ts";
-import AccountSchema from "../resources/account.json" assert { type: "json" };
+import AccountSchema from "../resources/account.json" with { type: "json" };
 
 const test = Deno.test;
 const options = { sanitizeResources: false, sanitizeOps: false };
@@ -17,7 +17,7 @@ let id = -1;
 
 const repo = await DB.getRepository(AccountModel);
 
-test("Default repository has 1,000 capacity", options, async function () {
+test("Default repository has 1,000 capacity", options,  function () {
   assertEquals(repo.capacity, DB.DEFAULT_CAPACITY);
 });
 
