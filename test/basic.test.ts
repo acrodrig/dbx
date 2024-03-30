@@ -17,7 +17,7 @@ let id = -1;
 
 const repo = await DB.getRepository(AccountModel);
 
-test("Default repository has 1,000 capacity", options,  function () {
+test("Default repository has 1,000 capacity", options, function () {
   assertEquals(repo.capacity, DB.DEFAULT_CAPACITY);
 });
 

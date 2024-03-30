@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Check out the code
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Setup deno
-      - uses: denoland/setup-deno@v1.1.1
+      - uses: denoland/setup-deno@v1
 
       # Run all test files in the repository and collect code coverage
       - run: deno test --allow-all --coverage=cov/
@@ -24,7 +24,7 @@ jobs:
       - run: deno coverage --lcov cov/ > cov.lcov
 
       # Upload to Codecov (see https://github.com/marketplace/actions/codecov)
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
         with:
           file: cov.lcov
           flags: unittests

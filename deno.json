@@ -11,7 +11,7 @@
   },
   "lock": false,
   "tasks": {
-    "check": "deno check --unstable **/*.ts && deno fmt --check",
+    "check": "deno check **/*.ts && deno fmt --check",
     "lint": "deno lint src test",
     "release": "release",
     "test": "deno test -A",
