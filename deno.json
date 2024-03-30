@@ -5,9 +5,9 @@
   },
   "imports": {
     "mysql/": "https://deno.land/x/mysql@v2.12.1/",
-    "postgres/": "https://deno.land/x/postgres@v0.19.2/",
+    "postgres/": "https://deno.land/x/postgres@v0.19.3/",
     "sqlite/": "https://deno.land/x/sqlite@v3.8/",
-    "std/": "https://deno.land/std@0.217.0/"
+    "std/": "https://deno.land/std@0.221.0/"
   },
   "lock": false,
   "tasks": {

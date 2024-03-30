@@ -10,7 +10,7 @@ NAME="postgres"
 echo -n "🛢️  Starting Database Container ... "
 docker run -p "$PORT":5432 -e POSTGRES_HOST_AUTH_METHOD="trust" --rm --name="$NAME" -d postgres:latest
 
-# Wait for MySQL to start (\use IP as host to prevent socket file)
+# Wait for Postgres to start (use IP as host to prevent socket file)
 # echo -n "😴 Waiting for container to be ready ... "
 # until docker exec -it "$NAME" mysqladmin ping -h 127.0.0.1 --silent; do sleep 1; done
 sleep 3

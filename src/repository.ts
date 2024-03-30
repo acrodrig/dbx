@@ -99,7 +99,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
     // Run query
     const records = await DB.query(sql, parameters);
-    return records.pop()!.count as number;
+    return Number(records.pop()!.count);
   }
 
   // https://dev.mysql.com/doc/refman/8.0/en/delete.html

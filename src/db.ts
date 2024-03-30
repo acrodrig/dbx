@@ -143,7 +143,7 @@ export class DB {
 
   // Mainly for debugging/tests (useful for SQLite)
   static _sqlFilter = function (sql: string): string {
-    return sql;
+    return sql.replaceAll(" ORDER BY NULL", "");
   };
 
   static async connect(config: ClientConfig, schemas?: Schema[]): Promise<Client> {
