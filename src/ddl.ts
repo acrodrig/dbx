@@ -127,7 +127,7 @@ export class DDL {
     const relations = !sqlite && Object.entries(schema.relations || []).map(([n, r]) => this.createRelation(dbType, schema.name, n, r!)).join("") || "";
 
     // Create constraints
-    const columnConstraints = Object.entries(schema.properties || {}).map(([n,c]) => this.createColumnConstraint(dbType, schema.name, n, c));
+    const columnConstraints = Object.entries(schema.properties || {}).map(([n, c]) => this.createColumnConstraint(dbType, schema.name, n, c));
     const independentConstraints = (schema.constraints || []).map((c) => this.createIndependentConstraint(dbType, schema.name, c));
     const constraints = !sqlite && [...columnConstraints, ...independentConstraints].join("") || "";
 
