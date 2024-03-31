@@ -24,7 +24,7 @@ jobs:
       - run: deno coverage --lcov cov/ > cov.lcov
 
       # Upload to Codecov (see https://github.com/marketplace/actions/codecov)
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v3
         with:
           file: cov.lcov
           flags: unittests
