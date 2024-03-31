@@ -29,5 +29,4 @@ jobs:
           fail_ci_if_error: true
 
       # Check that code is correctly formatted
-      # TODO: Format code and commit back (see https://mskelton.medium.com/ed458f58b7df)
       - run: deno fmt --check
