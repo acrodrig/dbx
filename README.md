@@ -201,7 +201,7 @@ Tasks can be run via `deno task <task>`. Tasks below.
 
 To release a custom script [release.sh](https://gist.github.com/acrodrig/8ca32ed618fe7d6d82900c1242d2eeb0) is used (following guidelines on [Publishing Your Deno Modules using GitHub](https://blog.bitsrc.io/publishing-your-deno-modules-using-github-f2bd86173392))
 
-To make sure that Github can Codecov can talk, you need to set the `CODECOV_TOKEN` environment variable in the Github repository settings:
+To make sure that Github and Codecov can talk, you need to set the `CODECOV_TOKEN` environment variable in the Github repository settings:
 
 ```bash
 gh secret set CODECOV_TOKEN --body "$CODECOV_TOKEN"
