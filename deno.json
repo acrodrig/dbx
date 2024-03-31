@@ -4,6 +4,7 @@
     "include": ["src/", "test/"]
   },
   "imports": {
+    "schema": "npm:@types/json-schema/7.0.15",
     "mysql/": "https://deno.land/x/mysql@v2.12.1/",
     "postgres/": "https://deno.land/x/postgres@v0.19.3/",
     "sqlite/": "https://deno.land/x/sqlite@v3.8/",

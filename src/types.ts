@@ -12,7 +12,9 @@ export interface Property {
   default?: unknown;
   format?: string;
   maxLength?: number;
+  maximum?: number | string;
   minLength?: number;
+  minimum?: number | string;
   pattern?: string;
   required?: boolean;
   readOnly?: boolean;

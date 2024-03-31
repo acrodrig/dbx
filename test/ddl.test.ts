@@ -12,7 +12,6 @@ const test = Deno.test;
 
 const DEBUG = Deno.env.get("DEBUG") !== undefined;
 const HR = "-".repeat(80);
-const RLIKE = "~*";
 
 const DB = await dbInit(getProvider(), [AccountSchema as Schema]);
 
@@ -64,6 +63,7 @@ CREATE TABLE IF NOT EXISTS TestAccount (
     INDEX updated (updated),
     INDEX valueList (id,(CAST(valueList AS CHAR(32) ARRAY)),enabled),
     FULLTEXT  (comments,country,phone,name),
+    CONSTRAINT account_established CHECK (established >= '2020-01-01'),
     CONSTRAINT account_email CHECK (email IS NULL OR email RLIKE '^[^@]+@[^@]+[.][^@]{2,}$'),
     CONSTRAINT account_phone CHECK (phone IS NULL OR phone RLIKE '^[0-9]{8,16}$')
 );
@@ -91,8 +91,9 @@ CREATE TABLE IF NOT EXISTS TestAccount (
     name        VARCHAR(256) NOT NULL UNIQUE,
     preferences JSON NOT NULL DEFAULT ('{"wrap":true,"minAge":18}'),
     valueList   JSON GENERATED ALWAYS AS (JSON_EXTRACT_PATH(preferences, '$.*')) STORED,
-    CONSTRAINT account_email CHECK (email IS NULL OR email ${RLIKE} '^[^@]+@[^@]+[.][^@]{2,}$'),
-    CONSTRAINT account_phone CHECK (phone IS NULL OR phone ${RLIKE} '^[0-9]{8,16}$')
+    CONSTRAINT account_established CHECK (established >= '2020-01-01'),
+    CONSTRAINT account_email CHECK (email IS NULL OR email ~* '^[^@]+@[^@]+[.][^@]{2,}$'),
+    CONSTRAINT account_phone CHECK (phone IS NULL OR phone ~* '^[0-9]{8,16}$')
 );
 CREATE INDEX IF NOT EXISTS TestAccount_inserted ON TestAccount (inserted);
 CREATE INDEX IF NOT EXISTS TestAccount_updated ON TestAccount (updated);

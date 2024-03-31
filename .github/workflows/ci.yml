@@ -17,18 +17,17 @@ jobs:
       # Setup deno
       - uses: denoland/setup-deno@v1
 
-      # Run all test files in the repository and collect code coverage
+      # Run testsm collect code coverage and generate report from the collected coverage
       - run: deno test --allow-all --coverage=cov/
-
-      # This generates a report from the collected coverage
       - run: deno coverage --lcov cov/ > cov.lcov
 
       # Upload to Codecov (see https://github.com/marketplace/actions/codecov)
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: cov.lcov
-          flags: unittests
           fail_ci_if_error: true
 
-      # Format code and commit back (see https://mskelton.medium.com/auto-formatting-code-using-prettier-and-github-actions-ed458f58b7df)
-      - run: deno fmt --options-line-width 180 --check src test
+      # Check that code is correctly formatted
+      # TODO: Format code and commit back (see https://mskelton.medium.com/ed458f58b7df)
+      - run: deno fmt --check

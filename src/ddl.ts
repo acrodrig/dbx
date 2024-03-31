@@ -94,8 +94,18 @@ export class DDL {
     return `${pad}CONSTRAINT ${name} FOREIGN KEY (${relation.join}) REFERENCES ${relation.target} (id)${da}${ua},\n`;
   }
 
-  // Constraint generator
-  static createConstraint(_dbType: string, parent: string, constraint: Constraint, padWidth = 4): string {
+  // Constraint independent generator
+  static createColumnConstraint(_dbType: string, parent: string, name: string, column: Column, padWidth = 4): string {
+    const pad = "".padEnd(padWidth);
+    const value = (v: number | string) => typeof v === "string" ? "'" + v + "'" : v;
+    let expr = "";
+    if (column.maximum) expr += `${name} >= ${value(column.maximum)}`;
+    if (column.minimum) expr += `${name} >= ${value(column.minimum)}`;
+    return expr ? `${pad}${name ? "CONSTRAINT " + (parent + "_" + name).toLowerCase() + " " : ""}CHECK (${expr}),\n` : "";
+  }
+
+  // Constraint independent generator
+  static createIndependentConstraint(_dbType: string, parent: string, constraint: Constraint, padWidth = 4): string {
     const pad = "".padEnd(padWidth), simple = typeof constraint === "string";
     const name = simple ? undefined : (parent + "_" + constraint.name).toLowerCase();
     const expr = simple ? constraint : constraint.check;
@@ -115,7 +125,11 @@ export class DDL {
     const columns = Object.entries(schema.properties).map(([n, c]) => this.createColumn(dbType, n, c!, namePad)).join("");
     const indices = !other && schema.indices?.map((i) => this.createIndex(dbType, i)).join("") || "";
     const relations = !sqlite && Object.entries(schema.relations || []).map(([n, r]) => this.createRelation(dbType, schema.name, n, r!)).join("") || "";
-    const constraints = !sqlite && (schema.constraints || []).map((c) => this.createConstraint(dbType, schema.name, c)).join("") || "";
+
+    // Create constraints
+    const columnConstraints = Object.entries(schema.properties || {}).map(([n,c]) => this.createColumnConstraint(dbType, schema.name, n, c));
+    const independentConstraints = (schema.constraints || []).map((c) => this.createIndependentConstraint(dbType, schema.name, c));
+    const constraints = !sqlite && [...columnConstraints, ...independentConstraints].join("") || "";
 
     // Create sql
     let sql = `CREATE TABLE IF NOT EXISTS ${table} (\n${columns}${indices}${relations}${constraints})`;
