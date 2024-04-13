@@ -93,10 +93,9 @@ export class DDL {
   static createFullTextIndex(dbType: string, columns: string[], padWidth = 4, table: string, name = "fulltext"): string {
     const pad = "".padEnd(padWidth);
 
-    table = table.toLowerCase();
     const wrapper = (columns: string[], s = ",", w = false) => columns.map((c) => w ? "COALESCE(" + c + ",'')" : c).join(s);
-    if (dbType === DB.Provider.MYSQL) return `${pad}CREATE FULLTEXT INDEX ${table}_${name} ON ${table} (${wrapper(columns, ",")});\n`;
-    if (dbType === DB.Provider.POSTGRES) return `${pad}CREATE INDEX ${table}_${name} ON ${table} USING GIN (TO_TSVECTOR('english', ${wrapper(columns, "||' '||", true)}));`;
+    if (dbType === DB.Provider.MYSQL) return `${pad}CREATE FULLTEXT INDEX ${table.toLowerCase()}_${name} ON ${table} (${wrapper(columns, ",")});\n`;
+    if (dbType === DB.Provider.POSTGRES) return `${pad}CREATE INDEX ${table.toLowerCase()}_${name} ON ${table} USING GIN (TO_TSVECTOR('english', ${wrapper(columns, "||' '||", true)}));`;
 
     return "";
   }
