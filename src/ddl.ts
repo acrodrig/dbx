@@ -94,8 +94,9 @@ export class DDL {
     const pad = "".padEnd(padWidth);
 
     const wrapper = (columns: string[], s = ",", w = false) => columns.map((c) => w ? "COALESCE(" + c + ",'')" : c).join(s);
-    if (dbType === DB.Provider.MYSQL) return `${pad}CREATE FULLTEXT INDEX ${table.toLowerCase()}_${name} ON ${table} (${wrapper(columns, ",")});\n`;
-    if (dbType === DB.Provider.POSTGRES) return `${pad}CREATE INDEX ${table.toLowerCase()}_${name} ON ${table} USING GIN (TO_TSVECTOR('english', ${wrapper(columns, "||' '||", true)}));`;
+    const tlc = table.toLowerCase();
+    if (dbType === DB.Provider.MYSQL) return `${pad}CREATE FULLTEXT INDEX ${tlc}_${name} ON ${table} (${wrapper(columns, ",")});\n`;
+    if (dbType === DB.Provider.POSTGRES) return `${pad}CREATE INDEX ${tlc}_${name} ON ${table} USING GIN (TO_TSVECTOR('english', ${wrapper(columns, "||' '||", true)}));`;
 
     return "";
   }
