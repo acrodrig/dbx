@@ -327,7 +327,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
         tree.push(fullTextColumns?.length ? value[key] + (DB.type === DB.Provider.POSTGRES ? "" : "*") : "%" + value[key] + "%");
 
         // Regardless of what we are looking for, MySQL wants us to enter every column here
-        const wrapper = (columns: string[], s = ",", w = false) => columns.map((c) => w ? "COALESCE(" + c + "'')" : c).join(s);
+        const wrapper = (columns: string[], s = ",", w = false) => columns.map((c) => w ? "COALESCE(" + c + ",'')" : c).join(s);
         if (fullTextColumns?.length) {
           if (DB.type === DB.Provider.MYSQL) expressions.push("MATCH (" + wrapper(fullTextColumns) + ") AGAINST (? IN BOOLEAN MODE)");
           if (DB.type === DB.Provider.POSTGRES) expressions.push("TO_TSVECTOR('english', " + wrapper(fullTextColumns) + ") @@ TO_TSQUERY(?)");
