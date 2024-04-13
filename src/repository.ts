@@ -158,7 +158,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
     // This is the only method where full text search is permitted (it could be disastrous in DELETE for example)
     const properties = this.schema?.properties ?? {};
-    const fullTextColumns = Object.entries(properties).filter(([n,p]) => p.fullText).map(([n,_]) => n);
+    const fullTextColumns = Object.entries(properties).filter(([n, p]) => p.fullText).map(([n, _]) => n);
     if (DB.type === DB.Provider.SQLITE) fullTextColumns.length = 0;
 
     // Build SQL (if there is a select, clean it to prevent SQL injection)
@@ -327,11 +327,11 @@ export class Repository<T extends Identifiable> extends EventTarget {
         tree.push(fullTextColumns?.length ? value[key] + (DB.type === DB.Provider.POSTGRES ? "" : "*") : "%" + value[key] + "%");
 
         // Regardless of what we are looking for, MySQL wants us to enter every column here
+        const wrapper = (columns: string[], s = ",", w = false) => columns.map((c) => w ? "COALESCE(" + c + "'')" : c).join(s);
         if (fullTextColumns?.length) {
-          if (DB.type === DB.Provider.MYSQL) expressions.push("MATCH (" + fullTextColumns.join(",") + ") AGAINST (? IN BOOLEAN MODE)");
-          if (DB.type === DB.Provider.POSTGRES) expressions.push("TO_TSVECTOR('english', " + fullTextColumns.map(c => "COALESCE("+c+",'')").join("||' '||") + ") @@ TO_TSQUERY(?)");
-        }
-        else expressions.push(column + " LIKE ?");
+          if (DB.type === DB.Provider.MYSQL) expressions.push("MATCH (" + wrapper(fullTextColumns) + ") AGAINST (? IN BOOLEAN MODE)");
+          if (DB.type === DB.Provider.POSTGRES) expressions.push("TO_TSVECTOR('english', " + wrapper(fullTextColumns) + ") @@ TO_TSQUERY(?)");
+        } else expressions.push(column + " LIKE ?");
       } else if (column === "$sql") {
         // Special case for $sql
         expressions.push(value);

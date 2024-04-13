@@ -93,8 +93,10 @@ export class DDL {
   static createFullTextIndex(dbType: string, columns: string[], padWidth = 4, table: string, name = "fulltext"): string {
     const pad = "".padEnd(padWidth);
 
-    if (dbType === DB.Provider.MYSQL) return `${pad}CREATE FULLTEXT INDEX ${table.toLowerCase()}_${name} ON ${table} (${columns.join(",")});\n`;
-    if (dbType === DB.Provider.POSTGRES) return `${pad}CREATE INDEX ${table.toLowerCase()}_${name} ON ${table} USING GIN (TO_TSVECTOR('english', ${columns.map(c => "COALESCE("+c+",'')").join("||' '||")}));`;
+    table = table.toLowerCase();
+    const wrapper = (columns: string[], s = ",", w = false) => columns.map((c) => w ? "COALESCE(" + c + "'')" : c).join(s);
+    if (dbType === DB.Provider.MYSQL) return `${pad}CREATE FULLTEXT INDEX ${table}_${name} ON ${table} (${wrapper(columns, ",")});\n`;
+    if (dbType === DB.Provider.POSTGRES) return `${pad}CREATE INDEX ${table}_${name} ON ${table} USING GIN (TO_TSVECTOR('english', ${wrapper(columns, "||' '||", true)}));`;
 
     return "";
   }
@@ -151,7 +153,7 @@ export class DDL {
     if (schema.indices) sql += "\n" + schema.indices?.map((i) => this.createIndex(dbType, i, 0, table)).join("");
 
     // Full text index
-    const fullTextColumns = Object.entries(schema.properties).filter(([n,c]) => c.fullText).map(([n,_]) => n);
+    const fullTextColumns = Object.entries(schema.properties).filter(([n, c]) => c.fullText).map(([n, _]) => n);
     if (fullTextColumns.length) sql += this.createFullTextIndex(dbType, fullTextColumns, 0, table);
 
     const fixDanglingComma = (sql: string) => sql.replace(/,\n\)/, "\n);");

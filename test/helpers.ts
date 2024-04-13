@@ -19,7 +19,7 @@ export async function dbInit(type: string, schemas?: Schema[]) {
 
   try {
     await DB.connect({ type, hostname, database, username: "dbx", quiet: true }, schemas);
-    if (sqlite) await dbExec(Deno.readTextFileSync(import.meta.dirname+"/helpers.sql"));
+    if (sqlite) await dbExec(Deno.readTextFileSync(import.meta.dirname + "/helpers.sql"));
     if (schemas) await createTables(schemas);
   } catch (ex) {
     console.error("\n❌ Could not connect to DB '" + type + "' using 'dbx@" + hostname + "' or could not execute SQL!\n");
@@ -46,7 +46,7 @@ export async function createTables(schemas: Schema[]) {
   }
 }
 
-export const getProvider = function(): DB.Provider {
+export const getProvider = function (): DB.Provider {
   const provider = PROVIDER?.toLowerCase() as DB.Provider;
   if (provider && !Object.values(DB.Provider).includes(provider)) {
     console.error("\n❌ DB provider '" + provider + "' does not exist!\n");
