@@ -172,7 +172,7 @@ export class DB {
   // Transforms parameters (and SQL) into array-like and references via `?`
   static _transformParameters(sql: string, objectParameters: { [key: string]: unknown }, arrayParameters: unknown[], safe?: boolean): string {
     arrayParameters.splice(0, arrayParameters.length);
-    return sql.replace(/[:][$A-Z_][0-9A-Z_$]*/ig, function (name) {
+    return sql.replace(/:[$A-Z_][0-9A-Z_$]*/ig, function (name) {
       const value = objectParameters[name.substring(1)];
       if (value === undefined && !safe) throw new Error("Undefined parameter '" + name + "'");
       const isArray = Array.isArray(value);
@@ -237,9 +237,9 @@ export class DB {
   }
 
   // Uses the most standard MySQL syntax, modifies for other DBs inflight
-  static createTable(schema: Schema, type: string, execute: false, nameOverride?: string): Promise<string>;
-  static createTable(schema: Schema, type: string, execute: true, nameOverride?: string): Promise<boolean>;
-  static async createTable(schema: Schema, type = "mysql", execute = true, nameOverride?: string): Promise<string | boolean> {
+  static createTable(schema: Schema, type: DB.Provider, execute: false, nameOverride?: string): Promise<string>;
+  static createTable(schema: Schema, type: DB.Provider, execute: true, nameOverride?: string): Promise<boolean>;
+  static async createTable(schema: Schema, type: DB.Provider = DB.Provider.MYSQL, execute = true, nameOverride?: string): Promise<string | boolean> {
     const sql = DDL.createTable(schema, type, nameOverride);
     if (!execute) return Promise.resolve(sql);
     await DB.execute(sql);

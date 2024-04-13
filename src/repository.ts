@@ -157,7 +157,9 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const limit = filter.limit ?? 100;
 
     // This is the only method where full text search is permitted (it could be disastrous in DELETE for example)
-    const fullTextColumns = DB.type === "mysql" ? this.schema?.indices?.find((i) => i.fulltext)?.properties : undefined;
+    const properties = this.schema?.properties ?? {};
+    const fullTextColumns = Object.entries(properties).filter(([n,p]) => p.fullText).map(([n,_]) => n);
+    if (DB.type === DB.Provider.SQLITE) fullTextColumns.length = 0;
 
     // Build SQL (if there is a select, clean it to prevent SQL injection)
     const _select = select.length ? select.map((c) => c.replace(/[^a-zA-Z0-9_]/g, "")).join(",") : "*";
@@ -168,7 +170,6 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
     this.#logger.debug({ method: "find", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "find", sql: clean(sql), parameters });
-    // console.log("SQL", clean(sql));
 
     // Run query
     const records = await DB.query(sql, parameters);
@@ -296,7 +297,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
   }
 
   // Meta specifies that it will use ?? as literal parameter for the SQL query (valid in MySQL)
-  static _where<T>(where?: Where<T>, tree: Primitive[] = [], fullTextColumns?: string[]): string {
+  static _where<T>(where?: Where<T>, tree: Primitive[] = [], fullTextColumns: string[] = []): string {
     const entries = Object.entries(where ?? {});
     const expressions = [];
     for (const [name, value] of entries) {
@@ -319,14 +320,17 @@ export class Repository<T extends Identifiable> extends EventTarget {
       const column = CQ + name + CQ;
       let op = operators[key as keyof typeof operators];
 
-      if (op === "MATCH") {
+      if (op === operators.match) {
         // Special case for FULLTEXT (if the matching value is NOT truthy we skip)
         if (!value[key]) continue;
 
-        tree.push(fullTextColumns ? value[key] + "*" : "%" + value[key] + "%");
+        tree.push(fullTextColumns?.length ? value[key] + (DB.type === DB.Provider.POSTGRES ? "" : "*") : "%" + value[key] + "%");
 
         // Regardless of what we are looking for, MySQL wants us to enter every column here
-        if (fullTextColumns) expressions.push("MATCH (" + fullTextColumns.join(",") + ") AGAINST (? IN BOOLEAN MODE)");
+        if (fullTextColumns?.length) {
+          if (DB.type === DB.Provider.MYSQL) expressions.push("MATCH (" + fullTextColumns.join(",") + ") AGAINST (? IN BOOLEAN MODE)");
+          if (DB.type === DB.Provider.POSTGRES) expressions.push("TO_TSVECTOR('english', " + fullTextColumns.map(c => "COALESCE("+c+",'')").join("||' '||") + ") @@ TO_TSQUERY(?)");
+        }
         else expressions.push(column + " LIKE ?");
       } else if (column === "$sql") {
         // Special case for $sql

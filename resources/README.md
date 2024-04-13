@@ -9,6 +9,10 @@ Below is a pseudo-script that you can copy/paste to the command line to get star
 creating the database to develop locally.
 
 ```bash
+# Install MySQL
+brew install mysql
+brew services start mysql
+
 # Create 'dbx'
 mysql -u root -e "CREATE DATABASE dbx DEFAULT CHARACTER SET utf8mb4"
 
@@ -27,14 +31,21 @@ Below is a pseudo-script that you can copy/paste to the command line to get star
 creating the database to develop locally.
 
 ```bash
+# Install MySQL
+brew install postresql
+brew services start postresql
+
+# Set default database to 'postgres'
+export PGDATABASE=postgres
+
 export DB="dbx"
 
 # Create 'dbx'
-psql -u root -e "CREATE DATABASE dbx"
+psql -c "CREATE DATABASE dbx"
 
 # Create main user (password should change for production)
-psql -u root -e "CREATE USER IF NOT EXISTS dbx"
+psql -c "CREATE USER dbx"
 
 # Grant on the main schema
-psql -u root -e "GRANT ALL ON ALL TABLES IN SCHEMA public TO dbx"
+psql -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO dbx"
 ```

@@ -11,6 +11,7 @@ export interface Property {
   comment?: string;
   default?: unknown;
   format?: string;
+  fullText?: boolean;
   maxLength?: number;
   maximum?: number | string;
   minLength?: number;
@@ -36,7 +37,6 @@ export interface Index {
   array?: number;
   comment?: string;
   properties: string[];
-  fulltext?: boolean;
   name?: string;
   subType?: string;
   unique?: boolean;

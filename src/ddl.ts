@@ -10,6 +10,12 @@ const dataTypes = {
   string: "VARCHAR",
 };
 
+const serialType = {
+  sqlite: " AUTOINCREMENT",
+  mysql: " AUTO_INCREMENT",
+  postgres: "",
+};
+
 const _BaseSchema: DB.Schema = {
   name: "_BaseSchema",
   properties: {
@@ -47,42 +53,50 @@ export class DDL {
 
   // Column generator
   static createColumn(dbType: string, name: string, column: Column, namePad: number, padWidth = DDL.padWidth, defaultWidth = DDL.defaultWidth): string {
-    // const sqlite = dbType === "sqlite", postgres = dbType === "postgres", other = sqlite || postgres;
-
     if (typeof (column.default) === "object") column.default = "('" + JSON.stringify(column.default) + "')";
     if (column.dateOn === "insert") column.default = "CURRENT_TIMESTAMP";
-    if (column.dateOn === "update") column.default = "CURRENT_TIMESTAMP" + (dbType !== "mysql" ? "" : " ON UPDATE CURRENT_TIMESTAMP");
+    if (column.dateOn === "update") column.default = "CURRENT_TIMESTAMP" + (dbType !== DB.Provider.MYSQL ? "" : " ON UPDATE CURRENT_TIMESTAMP");
     const pad = "".padEnd(padWidth);
-    const type = dataTypes[column.type as keyof typeof dataTypes];
+    let type = dataTypes[column.type as keyof typeof dataTypes];
     const autoIncrement = column.primaryKey && column.type === "integer";
     const length = column.maxLength || type.endsWith("CHAR") ? "(" + (column.maxLength ?? defaultWidth) + ")" : "";
     const nullable = column.primaryKey || column.required ? " NOT NULL" : "";
-    const gen = autoIncrement ? (dbType === "sqlite" ? " AUTOINCREMENT" : " AUTO_INCREMENT") : "";
+    const gen = autoIncrement ? serialType[dbType as keyof typeof serialType] : "";
     const asExpression = column.asExpression && (typeof column.asExpression === "string" ? DB._sqlFilter(column.asExpression) : column.asExpression[dbType]);
     const as = asExpression ? " GENERATED ALWAYS AS (" + asExpression + ") " + (column.generatedType?.toUpperCase() || "VIRTUAL") : "";
     const def = Object.hasOwn(column, "default") ? " DEFAULT " + column.default : "";
     const key = column.primaryKey ? " PRIMARY KEY" : (column.unique ? " UNIQUE" : "");
-    const comment = dbType === "mysql" && column.comment ? " COMMENT '" + column.comment.replace(/'/g, "''") + "'" : "";
+    const comment = dbType === DB.Provider.MYSQL && column.comment ? " COMMENT '" + column.comment.replace(/'/g, "''") + "'" : "";
+
+    // Correct Postgres JSON type
+    if (dbType === DB.Provider.POSTGRES && type === "JSON") type = "JSONB";
+    if (dbType === DB.Provider.POSTGRES && autoIncrement) type = "SERIAL";
+
     return `${pad}${name.padEnd(namePad)}${type}${length}${nullable}${as}${def}${key}${gen}${comment},\n`;
   }
 
   // Index generator
-  // If we pass a table name it will create an independent expression
-  static createIndex(dbType: string, indice: Index, padWidth = 4, table?: string): string {
+  static createIndex(dbType: string, indice: Index, padWidth = 4, table: string): string {
     const pad = "".padEnd(padWidth);
     const columns = [...indice.properties] as string[];
-    const key = indice.fulltext ? "FULLTEXT" : "INDEX";
-    const ine = table ? " IF NOT EXISTS" : "";
-    const end = table ? ";" : ",";
 
     // If there is an array expression, replace the column by it
     // TODO: multivalued indexes only supported on MYSQL for now, Postgres and SQLite will use the entire
     const subType = indice.subType ?? "CHAR(32)";
-    if (indice.array !== undefined) columns[indice.array] = "(CAST(" + columns[indice.array] + " AS " + subType + (dbType === "mysql" ? " ARRAY" : "") + "))";
+    if (indice.array !== undefined) columns[indice.array] = "(CAST(" + columns[indice.array] + " AS " + subType + (dbType === DB.Provider.MYSQL ? " ARRAY" : "") + "))";
 
     const name = indice.name ?? "";
     const unique = indice.unique ? "UNIQUE " : "";
-    return `${pad}${table ? "CREATE " : ""}${unique}${key}${ine} ${table ? table + "_" : ""}${name}${table ? " ON " + table : ""} (${columns.join(",")})${end}\n`;
+    return `${pad}CREATE ${unique}INDEX ${table.toLowerCase()}_${name} ON ${table} (${columns.join(",")});\n`;
+  }
+
+  static createFullTextIndex(dbType: string, columns: string[], padWidth = 4, table: string, name = "fulltext"): string {
+    const pad = "".padEnd(padWidth);
+
+    if (dbType === DB.Provider.MYSQL) return `${pad}CREATE FULLTEXT INDEX ${table.toLowerCase()}_${name} ON ${table} (${columns.join(",")});\n`;
+    if (dbType === DB.Provider.POSTGRES) return `${pad}CREATE INDEX ${table.toLowerCase()}_${name} ON ${table} USING GIN (TO_TSVECTOR('english', ${columns.map(c => "COALESCE("+c+",'')").join("||' '||")}));`;
+
+    return "";
   }
 
   // Relation generator
@@ -113,17 +127,16 @@ export class DDL {
   }
 
   // Uses the most standard MySQL syntax and then it is fixed afterwards
-  static createTable(schema: Schema, dbType = "mysql", nameOverride?: string): string {
+  static createTable(schema: Schema, dbType: DB.Provider = DB.Provider.MYSQL, nameOverride?: string): string {
     // Get name padding
     const namePad = Math.max(...Object.keys(schema.properties).map((n) => n.length || 0)) + 1;
 
     // Check with if type is SQLite since it is the most restrictive
-    const sqlite = dbType === "sqlite", postgres = dbType === "postgres", other = sqlite || postgres;
+    const sqlite = dbType === DB.Provider.SQLITE;
 
     // Create SQL
     const table = nameOverride ?? schema.name;
     const columns = Object.entries(schema.properties).map(([n, c]) => this.createColumn(dbType, n, c!, namePad)).join("");
-    const indices = !other && schema.indices?.map((i) => this.createIndex(dbType, i)).join("") || "";
     const relations = !sqlite && Object.entries(schema.relations || []).map(([n, r]) => this.createRelation(dbType, schema.name, n, r!)).join("") || "";
 
     // Create constraints
@@ -132,22 +145,27 @@ export class DDL {
     const constraints = !sqlite && [...columnConstraints, ...independentConstraints].join("") || "";
 
     // Create sql
-    let sql = `CREATE TABLE IF NOT EXISTS ${table} (\n${columns}${indices}${relations}${constraints})`;
+    let sql = `CREATE TABLE IF NOT EXISTS ${table} (\n${columns}${relations}${constraints})`;
 
     // Independent indexes
-    if (other && schema.indices) sql += "\n" + schema.indices?.map((i) => i.fulltext ? "" : this.createIndex(dbType, i, 0, table)).join("");
+    if (schema.indices) sql += "\n" + schema.indices?.map((i) => this.createIndex(dbType, i, 0, table)).join("");
+
+    // Full text index
+    const fullTextColumns = Object.entries(schema.properties).filter(([n,c]) => c.fullText).map(([n,_]) => n);
+    if (fullTextColumns.length) sql += this.createFullTextIndex(dbType, fullTextColumns, 0, table);
 
     const fixDanglingComma = (sql: string) => sql.replace(/,\n\)/, "\n);");
-    sql = fixDanglingComma(postgres ? this.postgres(sql) : sql);
+    if (dbType === DB.Provider.POSTGRES) sql = this.postgres(sql);
+    sql = fixDanglingComma(sql);
 
     return sql;
   }
 
+  // Function to accommodate the differences between MySQL and Postgres
   static postgres(sql: string) {
-    return sql.replace(/(DATETIME)|(INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT)|(JSON_EXTRACT)|(RLIKE)/g, (m: string) => {
+    return sql.replace(/\w+/g, (m: string) => {
       if (m === "DATETIME") return "TIMESTAMP";
-      if (m === "INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT") return "SERIAL";
-      if (m === "JSON_EXTRACT") return "JSON_EXTRACT_PATH";
+      if (m === "JSON_EXTRACT") return "JSONB_EXTRACT_PATH";
       if (m === "RLIKE") return "~*";
       return m;
     });

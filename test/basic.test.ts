@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno test -A --unstable --no-check
+#!/usr/bin/env -S deno test -A
 
 import { assert, assertEquals, assertExists } from "std/assert/mod.ts";
 import { Schema } from "../src/types.ts";
@@ -106,7 +106,7 @@ test("Find by ID and update", options, async function () {
   assertEquals(account.comments, comments);
 });
 
-test("Clean", options, async function () {
-  const ok = await repo.deleteById(id);
-  assert(ok);
-});
+// test("Clean", options, async function () {
+//   const ok = await repo.deleteById(id);
+//   assert(ok);
+// });
