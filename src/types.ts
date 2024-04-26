@@ -50,7 +50,7 @@ export interface Relation {
   type: "many-to-one" | "many-to-many";
 }
 
-export type Constraint = string | { name?: string; check: string; enforced?: boolean; comment?: string };
+export type Constraint = { name?: string; check: string; enforced?: boolean; comment?: string; provider?: string };
 
 export interface Schema {
   name: string;

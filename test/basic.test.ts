@@ -15,7 +15,7 @@ const DB = await dbInit(getProvider(), [AccountSchema as Schema]);
 
 let id = -1;
 
-const repo = await DB.getRepository(AccountModel);
+const repo = DB.getRepository("accounts");
 
 test("Default repository has 1,000 capacity", options, function () {
   assertEquals(repo.capacity, DB.DEFAULT_CAPACITY);
@@ -52,7 +52,7 @@ test("Retrieve via another column", options, async function () {
 });
 
 test("Retrieve via SQL query", options, async function () {
-  const records = await DB.query(`SELECT * FROM Account WHERE name = ?`, [NAME]);
+  const records = await DB.query(`SELECT * FROM accounts WHERE name = ?`, [NAME]);
   const accounts = records.map((r) => new AccountModel(r as unknown as AccountModel));
   assertEquals(accounts.length, 1);
   assertEquals(accounts[0].name, NAME);
@@ -106,7 +106,7 @@ test("Find by ID and update", options, async function () {
   assertEquals(account.comments, comments);
 });
 
-// test("Clean", options, async function () {
-//   const ok = await repo.deleteById(id);
-//   assert(ok);
-// });
+test("Clean", options, async function () {
+  const ok = await repo.deleteById(id);
+  assert(ok);
+});

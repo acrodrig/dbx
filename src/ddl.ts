@@ -32,7 +32,6 @@ const _BaseSchema: DB.Schema = {
 
 export class DDL {
   static padWidth = 4;
-  static milliPrecision = 3;
   static defaultWidth = 256;
 
   // Enhance schema with standard properties
@@ -87,16 +86,15 @@ export class DDL {
 
     const name = indice.name ?? "";
     const unique = indice.unique ? "UNIQUE " : "";
-    return `${pad}CREATE ${unique}INDEX ${table.toLowerCase()}_${name} ON ${table} (${columns.join(",")});\n`;
+    return `${pad}CREATE ${unique}INDEX ${table}_${name} ON ${table} (${columns.join(",")});\n`;
   }
 
   static createFullTextIndex(dbType: string, columns: string[], padWidth = 4, table: string, name = "fulltext"): string {
     const pad = "".padEnd(padWidth);
 
     const wrapper = (columns: string[], s = ",", w = false) => columns.map((c) => w ? "COALESCE(" + c + ",'')" : c).join(s);
-    const tlc = table.toLowerCase();
-    if (dbType === DB.Provider.MYSQL) return `${pad}CREATE FULLTEXT INDEX ${tlc}_${name} ON ${table} (${wrapper(columns, ",")});\n`;
-    if (dbType === DB.Provider.POSTGRES) return `${pad}CREATE INDEX ${tlc}_${name} ON ${table} USING GIN (TO_TSVECTOR('english', ${wrapper(columns, "||' '||", true)}));`;
+    if (dbType === DB.Provider.MYSQL) return `${pad}CREATE FULLTEXT INDEX ${table}_${name} ON ${table} (${wrapper(columns, ",")});\n`;
+    if (dbType === DB.Provider.POSTGRES) return `${pad}CREATE INDEX ${table}_${name} ON ${table} USING GIN (TO_TSVECTOR('english', ${wrapper(columns, "||' '||", true)}));`;
 
     return "";
   }
@@ -106,7 +104,7 @@ export class DDL {
     const pad = "".padEnd(padWidth);
     const da = relation.delete ? " ON DELETE " + relation.delete?.toUpperCase().replace(/-/g, " ") : "";
     const ua = relation.update ? " ON DELETE " + relation.update?.toUpperCase().replace(/-/g, " ") : "";
-    name = (parent + "_" + name).toLowerCase();
+    name = parent + "_" + name;
     return `${pad}CONSTRAINT ${name} FOREIGN KEY (${relation.join}) REFERENCES ${relation.target} (id)${da}${ua},\n`;
   }
 
@@ -117,7 +115,8 @@ export class DDL {
     let expr = "";
     if (column.maximum) expr += `${name} >= ${value(column.maximum)}`;
     if (column.minimum) expr += `${name} >= ${value(column.minimum)}`;
-    return expr ? `${pad}${name ? "CONSTRAINT " + (parent + "_" + name).toLowerCase() + " " : ""}CHECK (${expr}),\n` : "";
+    name = parent + "_" + name;
+    return expr ? `${pad}${name ? "CONSTRAINT " + name + " " : ""}CHECK (${expr}),\n` : "";
   }
 
   // Constraint independent generator
@@ -128,7 +127,7 @@ export class DDL {
     return `${pad}${name ? "CONSTRAINT " + name + " " : ""}CHECK (${expr}),\n`;
   }
 
-  // Uses the most standard MySQL syntax and then it is fixed afterwards
+  // Uses the most standard MySQL syntax, and then it is fixed afterward
   static createTable(schema: Schema, dbType: DB.Provider = DB.Provider.MYSQL, nameOverride?: string): string {
     // Get name padding
     const namePad = Math.max(...Object.keys(schema.properties).map((n) => n.length || 0)) + 1;
@@ -142,8 +141,9 @@ export class DDL {
     const relations = !sqlite && Object.entries(schema.relations || []).map(([n, r]) => this.createRelation(dbType, schema.name, n, r!)).join("") || "";
 
     // Create constraints
+    const filter = (c: Constraint) => !c.provider || c.provider === dbType;
     const columnConstraints = Object.entries(schema.properties || {}).map(([n, c]) => this.createColumnConstraint(dbType, schema.name, n, c));
-    const independentConstraints = (schema.constraints || []).map((c) => this.createIndependentConstraint(dbType, schema.name, c));
+    const independentConstraints = (schema.constraints || []).filter(filter).map((c) => this.createIndependentConstraint(dbType, schema.name, c));
     const constraints = !sqlite && [...columnConstraints, ...independentConstraints].join("") || "";
 
     // Create sql

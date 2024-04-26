@@ -1,5 +1,5 @@
 {
-    "name": "Account",
+    "name": "accounts",
     "properties": {
         "id":          { "type": "integer", "required": true,  "primaryKey": true, "comment": "Unique identifier, auto-generated. It's the primary key." },
         "inserted":    { "type": "date",    "required": false, "dateOn": "insert", "comment": "Timestamp when current record is inserted" },
