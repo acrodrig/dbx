@@ -15,7 +15,7 @@ const DB = await dbInit(getProvider(), [AccountSchema as Schema]);
 
 let id = -1;
 
-const repo = DB.getRepository("accounts");
+const repo = DB.getRepository(AccountModel);
 
 test("Default repository has 1,000 capacity", options, function () {
   assertEquals(repo.capacity, DB.DEFAULT_CAPACITY);

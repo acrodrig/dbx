@@ -153,8 +153,11 @@ export class DB {
     // By default, print to stdout
     this.quiet = config.quiet === undefined ? !Deno.stdout.isTerminal() : config.quiet;
 
-    // Iterate over the schemas
-    schemas?.forEach((s) => DB.schemas.set(s.name, s));
+    // Iterate over the schemas and map them by name and type if it exists
+    schemas?.forEach((s) => {
+      DB.schemas.set(s.name, s);
+      if (s.type) DB.schemas.set(s.type, s);
+    });
     if (DB.client) return Promise.resolve(DB.client);
     DB.type = config.type;
     DB.client = await connect(config);
@@ -259,7 +262,8 @@ export class DB {
     // Figure out target, schema and name
     const name = typeof target === "string" ? target : target.name;
     if (typeof target === "string") target = Object as unknown as Class<T>;
-    repository = new Repository(target, schema ?? DB.schemas.get(name), name, this.capacity);
+    if (!schema) schema = DB.schemas.get(name);
+    repository = new Repository(target, schema, schema?.name ?? name, this.capacity);
     this.repositories.set(target, repository as Repository<Identifiable>);
 
     // Return repository

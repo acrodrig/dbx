@@ -12,7 +12,7 @@ const DB = await dbInit(getProvider(), []);
 
 const DATA = Deno.readTextFileSync(new URL("../resources/data.sql", import.meta.url));
 
-const repo = DB.getRepository("Employees");
+const repo = DB.getRepository("employees");
 
 // Ensure DB exists and it is initialized
 let sql = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE LOWER(TABLE_NAME) = 'employees'";
@@ -28,7 +28,7 @@ try {
 }
 
 test("Ensure DB data", options, async function () {
-  const rows = await DB.query("SELECT 1 FROM Employees");
+  const rows = await DB.query("SELECT 1 FROM employees");
   assertEquals(rows.length, 14);
 });
 
@@ -44,6 +44,6 @@ test("Select employees with salary less than 1000", options, async function () {
 });
 
 test("Query employees with salary more than 1000", options, async function () {
-  const employees = await DB.query("SELECT * FROM Employees WHERE salary > :minSal", { minSal: 1000 });
+  const employees = await DB.query("SELECT * FROM employees WHERE salary > :minSal", { minSal: 1000 });
   assertEquals(employees.length, 12);
 });

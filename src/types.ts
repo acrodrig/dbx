@@ -53,7 +53,11 @@ export interface Relation {
 export type Constraint = { name?: string; check: string; enforced?: boolean; comment?: string; provider?: string };
 
 export interface Schema {
+  // Name of relation, normally the table name
   name: string;
+  // Type of the object, which should correspond to the entity name (i.e. class)
+  type?: string;
+  // Map of properties
   properties: { [key: string]: Column };
   indices?: Index[];
   relations?: { [key: string]: Relation };
