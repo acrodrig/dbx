@@ -1,4 +1,4 @@
-import { ConsoleHandler, setup } from "std/log/mod.ts";
+import { ConsoleHandler, setup } from "@std/log";
 import { DB } from "../src/db.ts";
 import { DDL } from "../src/ddl.ts";
 import { Schema } from "../src/types.ts";

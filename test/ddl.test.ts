@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno test -A --no-check
 
-import { assertEquals } from "std/assert/mod.ts";
+import { assertEquals } from "@std/assert";
 import { Schema } from "../src/types.ts";
 import { DDL } from "../src/ddl.ts";
 import { createTables, dbExec, dbInit, getProvider } from "./helpers.ts";

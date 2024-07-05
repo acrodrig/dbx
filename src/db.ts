@@ -1,5 +1,5 @@
-import { blue, white } from "std/fmt/colors.ts";
-import { ConsoleHandler, getLogger } from "std/log/mod.ts";
+import { blue, white } from "@std/fmt/colors";
+import { ConsoleHandler, getLogger } from "@std/log";
 import { DDL } from "./ddl.ts";
 import { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";

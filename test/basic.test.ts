@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno test -A
 
-import { assert, assertEquals, assertExists } from "std/assert/mod.ts";
+import { assert, assertEquals, assertExists } from "@std/assert";
 import { Schema } from "../src/types.ts";
 import { dbInit, getProvider } from "./helpers.ts";
 import AccountModel from "../resources/account.ts";
