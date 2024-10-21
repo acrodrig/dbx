@@ -210,8 +210,8 @@ export class DB {
       // Need to await to be able to catch potential errors
       return await DB.client.query(DB._sqlFilter(sql), parameters);
     } catch (ex) {
-      if (TTY) DB.error(ex, sql, parameters);
-      this.logger.error({ method: "query", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
+      if (TTY) DB.error(ex as Error, sql, parameters);
+      this.logger.error({ method: "query", sql: clean(sql), parameters, error: (ex as Error).message, stack: (ex as Error).stack });
       throw ex;
     }
   }
@@ -233,8 +233,8 @@ export class DB {
       // Need to await to be able to catch potential errors
       return DB.client.execute(DB._sqlFilter(sql), parameters);
     } catch (ex) {
-      if (TTY) DB.error(ex, sql, parameters);
-      this.logger.error({ method: "execute", sql: clean(sql), parameters, error: ex.message, stack: ex.stack });
+      if (TTY) DB.error(ex as Error, sql, parameters);
+      this.logger.error({ method: "execute", sql: clean(sql), parameters, error: (ex as Error).message, stack: (ex as Error).stack });
       throw ex;
     }
   }

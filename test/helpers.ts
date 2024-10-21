@@ -23,7 +23,7 @@ export async function dbInit(type: string, schemas?: Schema[]) {
     if (schemas) await createTables(schemas);
   } catch (ex) {
     console.error("\n❌ Could not connect to DB '" + type + "' using 'dbx@" + hostname + "' or could not execute SQL!\n");
-    console.error("MESSAGE: " + ex.message + "");
+    console.error("MESSAGE: " + (ex as Error).message + "");
     console.error("\nMake sure the user is created in the database (with NO password) and the DB is up\n");
     Deno.exit(1);
   }
