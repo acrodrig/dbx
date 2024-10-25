@@ -4,7 +4,7 @@ import { DDL } from "../src/ddl.ts";
 import { Schema } from "../src/types.ts";
 
 const PROVIDER = Deno.env.get("TEST_PROVIDER") ?? Deno.args[0];
-if (!PROVIDER) console.warn("\n⚠️  Assuming SQLITE provider. You can use 'TEST_PROVIDER=<provider>' or '-- <provider>' (mysql, postgres, sqlite)\n");
+if (!PROVIDER) console.warn("\n⚠️  Assuming SQLITE provider. You can use 'TEST_PROVIDER=<provider>' or '-- <provider>' (mysql, mysql2, postgres, sqlite)\n");
 
 setup({
   handlers: { console: new ConsoleHandler("DEBUG") },

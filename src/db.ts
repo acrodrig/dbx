@@ -8,6 +8,7 @@ import { Repository } from "./repository.ts";
 import { Client as MySQLClient, configLogger } from "https://deno.land/x/mysql@v2.10.3/mod.ts";
 import { DB as SQLiteClient, QueryParameterSet } from "https://deno.land/x/sqlite@v3.4.0/mod.ts";
 import { Pool as PostgresClient } from "https://deno.land/x/postgres@v0.16.1/mod.ts";
+import { createConnection, type ResultSetHeader } from "npm:mysql2@2/promise";
 
 const TTY = Deno.stderr.isTerminal();
 
@@ -30,6 +31,7 @@ const Hook = {
 
 const Provider = {
   MYSQL: "mysql",
+  MYSQL2: "mysql2",
   POSTGRES: "postgres",
   SQLITE: "sqlite",
 } as const;
@@ -75,6 +77,24 @@ async function connect(config: ClientConfig): Promise<Client> {
       }
       query(sql: string, parameters?: Parameter[]) {
         return nativeClient.query(sql, parameters);
+      }
+    }();
+  }
+  if (config.type === Provider.MYSQL2) {
+    const nativeClient = await createConnection({ host: config.hostname, database: config.database, user: config.username, charset: "utf8mb4" });
+    return new class implements Client {
+      type = config.type;
+      close() {
+        // TODO
+        return Promise.resolve();
+      }
+      async execute(sql: string, parameters?: Parameter[]) {
+        const [ rsh ] = await nativeClient.execute(sql, parameters);
+        return { affectedRows: (rsh as ResultSetHeader).affectedRows, lastInsertId: (rsh as ResultSetHeader).insertId };
+      }
+      async query(sql: string, parameters?: Parameter[]) {
+        const [ rows ] = await nativeClient.query(sql, parameters);
+        return rows as Row[];
       }
     }();
   }
@@ -124,7 +144,7 @@ export class DB {
   static clientConfig: ClientConfig;
   static client: Client;
   static schemas = new Map<string, Schema>();
-  static type: string = Provider.MYSQL;
+  static type: string;
   static quiet?: boolean;
   static capacity = this.DEFAULT_CAPACITY;
 
@@ -242,7 +262,7 @@ export class DB {
   // Uses the most standard MySQL syntax, modifies for other DBs inflight
   static createTable(schema: Schema, type: DB.Provider, execute: false, nameOverride?: string): Promise<string>;
   static createTable(schema: Schema, type: DB.Provider, execute: true, nameOverride?: string): Promise<boolean>;
-  static async createTable(schema: Schema, type: DB.Provider = DB.Provider.MYSQL, execute = true, nameOverride?: string): Promise<string | boolean> {
+  static async createTable(schema: Schema, type: DB.Provider, execute = true, nameOverride?: string): Promise<string | boolean> {
     const sql = DDL.createTable(schema, type, nameOverride);
     if (!execute) return Promise.resolve(sql);
     await DB.execute(sql);
