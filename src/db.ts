@@ -81,7 +81,13 @@ async function connect(config: ClientConfig): Promise<Client> {
     }();
   }
   if (config.type === Provider.MYSQL2) {
-    const nativeClient = await createConnection({ host: config.hostname, database: config.database, user: config.username, charset: "utf8mb4" });
+    const nativeClient = await createConnection({
+      host: config.hostname ?? "127.0.0.1",
+      database: config.database,
+      user: config.username,
+      password: config.password,
+      charset: "utf8mb4"
+    });
     return new class implements Client {
       type = config.type;
       close() {
