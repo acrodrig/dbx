@@ -86,7 +86,7 @@ async function connect(config: ClientConfig): Promise<Client> {
       database: config.database,
       user: config.username,
       password: config.password,
-      charset: "utf8mb4"
+      charset: "utf8mb4",
     });
     return new class implements Client {
       type = config.type;
@@ -95,11 +95,11 @@ async function connect(config: ClientConfig): Promise<Client> {
         return Promise.resolve();
       }
       async execute(sql: string, parameters?: Parameter[]) {
-        const [ rsh ] = await nativeClient.execute(sql, parameters);
+        const [rsh] = await nativeClient.execute(sql, parameters);
         return { affectedRows: (rsh as ResultSetHeader).affectedRows, lastInsertId: (rsh as ResultSetHeader).insertId };
       }
       async query(sql: string, parameters?: Parameter[]) {
-        const [ rows ] = await nativeClient.query(sql, parameters);
+        const [rows] = await nativeClient.query(sql, parameters);
         return rows as Row[];
       }
     }();

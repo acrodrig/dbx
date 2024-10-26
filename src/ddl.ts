@@ -83,7 +83,9 @@ export class DDL {
     // If there is an array expression, replace the column by it
     // TODO: multivalued indexes only supported on MYSQL for now, Postgres and SQLite will use the entire
     const subType = indice.subType ?? "CHAR(32)";
-    if (indice.array !== undefined) columns[indice.array] = "(CAST(" + columns[indice.array] + " AS " + subType + (dbType === DB.Provider.MYSQL || dbType === DB.Provider.MYSQL2 ? " ARRAY" : "") + "))";
+    if (indice.array !== undefined) {
+      columns[indice.array] = "(CAST(" + columns[indice.array] + " AS " + subType + (dbType === DB.Provider.MYSQL || dbType === DB.Provider.MYSQL2 ? " ARRAY" : "") + "))";
+    }
 
     const name = indice.name ?? "";
     const unique = indice.unique ? "UNIQUE " : "";
