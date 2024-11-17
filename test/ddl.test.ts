@@ -3,7 +3,7 @@
 import { assertEquals } from "@std/assert";
 import { Schema } from "../src/types.ts";
 import { DDL } from "../src/ddl.ts";
-import { createTables, dbExec, dbInit, getProvider } from "./helpers.ts";
+import { createTables, dbInit, getProvider } from "./helpers.ts";
 import AccountSchema from "../resources/account.json" with { type: "json" };
 
 // See https://github.com/denoland/deno_std/blob/main/testing/_diff_test.ts

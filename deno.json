@@ -4,14 +4,15 @@
     "include": ["src/", "test/"]
   },
   "imports": {
-    "@std/assert": "jsr:@std/assert@^1.0",
-    "@std/collections": "jsr:@std/collections@^1.0",
-    "@std/fmt": "jsr:@std/fmt@^1.0",
-    "@std/log": "jsr:@std/log@^0.224",
+    "@std/assert": "jsr:@std/assert@^1",
+    "@std/collections": "jsr:@std/collections@^1",
+    "@std/fmt": "jsr:@std/fmt@^1",
+    "@std/log": "jsr:@std/log@^0",
     "schema": "npm:@types/json-schema/7.0.15",
-    "mysql/": "https://deno.land/x/mysql@v2.12.1/",
-    "postgres/": "https://deno.land/x/postgres@v0.19.3/",
-    "sqlite/": "https://deno.land/x/sqlite@v3.8/"
+    "mysql": "https://deno.land/x/mysql@v2.12.1/mod.ts",
+    "postgres": "https://deno.land/x/postgres@v0.19.3/mod.ts",
+    "sqlite": "https://deno.land/x/sqlite@v3.9.1/mod.ts",
+    "mysql2": "npm:mysql2@^3.11/promise"
   },
   "lock": false,
   "tasks": {

@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno test -A --no-check
+#!/usr/bin/env -S deno test -A
 
 import { assert, assertEquals } from "@std/assert";
 import { dbExec, dbInit, getProvider } from "./helpers.ts";

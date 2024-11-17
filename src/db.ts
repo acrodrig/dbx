@@ -5,10 +5,10 @@ import { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
 
 // See https://github.com/eveningkid/denodb/blob/master/deps.ts
-import { Client as MySQLClient, configLogger } from "https://deno.land/x/mysql@v2.10.3/mod.ts";
-import { DB as SQLiteClient, QueryParameterSet } from "https://deno.land/x/sqlite@v3.4.0/mod.ts";
-import { Pool as PostgresClient } from "https://deno.land/x/postgres@v0.16.1/mod.ts";
-import { createConnection, type ResultSetHeader } from "npm:mysql2@2/promise";
+import { Client as MySQLClient, configLogger } from "mysql";
+import { DB as SQLiteClient, QueryParameterSet } from "sqlite";
+import { Pool as PostgresClient } from "postgres";
+import { createConnection, type ResultSetHeader } from "mysql2";
 
 const TTY = Deno.stderr.isTerminal();
 
@@ -95,11 +95,11 @@ async function connect(config: ClientConfig): Promise<Client> {
         return Promise.resolve();
       }
       async execute(sql: string, parameters?: Parameter[]) {
-        const [rsh] = await nativeClient.execute(sql, parameters);
+        const [rsh] = await (nativeClient as any).execute(sql, parameters);
         return { affectedRows: (rsh as ResultSetHeader).affectedRows, lastInsertId: (rsh as ResultSetHeader).insertId };
       }
       async query(sql: string, parameters?: Parameter[]) {
-        const [rows] = await nativeClient.query(sql, parameters);
+        const [rows] = await (nativeClient as any).query(sql, parameters);
         return rows as Row[];
       }
     }();
