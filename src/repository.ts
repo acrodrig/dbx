@@ -46,7 +46,6 @@ export class Repository<T extends Identifiable> extends EventTarget {
   type: Class<T>;
   schema?: Schema;
   #cache?: LRU<number | string, T>;
-  #logger = DB.logger;
 
   // Additional where condition to be added to ALL queries. It is very
   // useful to ensure for example access to only one's own account
@@ -82,7 +81,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
   // Follow Loopback model (see https://loopback.io/doc/en/lb4/Querying-data.html)
-  async count(where: Where<T> = {}, debug = false): Promise<number> {
+  async count(where: Where<T> = {}, debug?: boolean): Promise<number> {
     assert(typeof where === "object" && !Array.isArray(where), "Parameter 'where' must be an object");
 
     // Compute where clause
@@ -93,9 +92,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const parameters = [...whereTree];
     const sql = `SELECT COUNT(1) AS count FROM ${this.table} WHERE ${_where}`;
 
-    this.#logger.debug({ method: "count", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "count", sql: clean(sql), parameters });
-    // console.log("SQL", clean(sql));
 
     // Run query
     const records = await DB.query(sql, parameters);
@@ -103,7 +100,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
   }
 
   // https://dev.mysql.com/doc/refman/8.0/en/delete.html
-  async delete<T>(where: Where<T>, debug = false): Promise<number> {
+  async delete<T>(where: Where<T>, debug?: boolean): Promise<number> {
     // If there is no filter, we are better off returning the results from all
     if (!where) throw new Error("Cannot perform unrestricted DELETE (with no WHERE clause)!");
     assert(typeof where === "object" && !Array.isArray(where), "Parameter 'where' must be an object");
@@ -115,14 +112,13 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const whereTree: Primitive[] = [];
     const sql = `DELETE FROM ${this.table} WHERE ${Repository._where({ ...where, ...this.baseWhere }, whereTree)}`;
     const parameters = whereTree;
-    this.#logger.debug({ method: "delete", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "delete", sql: clean(sql), parameters });
     const result = await DB.execute(sql, parameters);
     return result.affectedRows ?? -1;
   }
 
   // https://dev.mysql.com/doc/refman/8.0/en/delete.html
-  async deleteById(id: number | string, debug = false): Promise<boolean> {
+  async deleteById(id: number | string, debug?: boolean): Promise<boolean> {
     assert(typeof id === "number" && Number.isInteger(id), "Parameter 'id' must be an integer");
 
     // Clear cache entry
@@ -131,7 +127,6 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const whereTree: Primitive[] = [];
     const sql = `DELETE FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
     const parameters = [id, ...whereTree];
-    this.#logger.debug({ method: "delete", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "delete", sql: clean(sql), parameters });
     this.dispatchEvent(new CustomEvent(Hook.BEFORE_DELETE, { detail: { id } }));
     const result = await DB.execute(sql, parameters);
@@ -141,7 +136,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
   // Follow Loopback model (see https://loopback.io/doc/en/lb4/Querying-data.html)
-  async find(filter: Filter<T> = {}, debug = false): Promise<T[]> {
+  async find(filter: Filter<T> = {}, debug?: boolean): Promise<T[]> {
     // If there is no filter, we are better off returning the results from all
     if (!filter) return this.all();
 
@@ -168,7 +163,6 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const parameters = [...whereTree, limit, offset];
     const sql = `SELECT ${_select} FROM ${this.table} WHERE ${_where} ORDER BY ${_order} LIMIT ? OFFSET ?`;
 
-    this.#logger.debug({ method: "find", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "find", sql: clean(sql), parameters });
 
     // Run query
@@ -177,7 +171,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
   }
 
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
-  async findById(id: number | string, debug = false): Promise<T | undefined> {
+  async findById(id: number | string, debug?: boolean): Promise<T | undefined> {
     assert(typeof id === "number" && Number.isInteger(id), "Parameter 'id' must be an integer");
 
     // Check cache
@@ -186,7 +180,6 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const whereTree: Primitive[] = [];
     const sql = `SELECT * FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
     const parameters = [id, ...whereTree];
-    this.#logger.debug({ method: "findById", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "findById", sql: clean(sql), parameters });
     const records = await DB.query(sql, parameters);
     const record = records.pop();
@@ -197,7 +190,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
   }
 
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
-  async findOne(filter: Filter<T> = {}, debug = false): Promise<T | undefined> {
+  async findOne(filter: Filter<T> = {}, debug?: boolean): Promise<T | undefined> {
     filter.limit = 1;
 
     // Check cache
@@ -211,7 +204,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
   }
 
   // https://dev.mysql.com/doc/refman/8.0/en/insert.html
-  async insert(object: T, debug = false): Promise<T> {
+  async insert(object: T, debug?: boolean): Promise<T> {
     assert(typeof object === "object" && !Array.isArray(object), "Parameter 'object' must be an object");
 
     const record = this.toRecord(object);
@@ -219,18 +212,17 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const columns = names.map((name) => "" + CQ + name + CQ + "").join(",");
     const sql = `INSERT INTO ${this.table} (${columns}) VALUES (${join("?", names.length)})${DB.type === DB.Provider.POSTGRES ? " RETURNING id" : ""}`;
     const parameters = [...values];
-    this.#logger.debug({ method: "insert", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "insert", sql: clean(sql), parameters });
     this.dispatchEvent(new CustomEvent(Hook.BEFORE_INSERT, { detail: object }));
     const result = await DB.execute(sql, parameters as Primitive[]);
-    if (!result.lastInsertId) this.#logger.warn({ method: "insert", sql: clean(sql), warning: "Insert did produce a last inserted ID" });
+    if (!result.lastInsertId) DB.logger.warn({ method: "insert", sql: clean(sql), warning: "Insert did produce a last inserted ID" });
     if (result.lastInsertId) object.id = result.lastInsertId;
     this.dispatchEvent(new CustomEvent(Hook.AFTER_INSERT, { detail: object }));
     return object;
   }
 
   // https://dev.mysql.com/doc/refman/8.0/en/update.html
-  async update(object: Partial<T>, debug = false): Promise<T | undefined> {
+  async update(object: Partial<T>, debug?: boolean): Promise<T | undefined> {
     assert(typeof object === "object" && !Array.isArray(object), "Parameter 'object' must be an object");
     assert(typeof (object.id) === "number" && Number.isInteger(object.id), "Parameter 'id' must be an integer");
 
@@ -243,14 +235,13 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const columns = Object.keys(record).map((name) => "" + CQ + name + CQ + "=?").join(",");
     const sql = `UPDATE ${this.table} SET ${columns} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
     const parameters = [...Object.values(record), object.id, ...whereTree];
-    this.#logger.debug({ method: "update", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "update", sql: clean(sql), parameters });
     this.dispatchEvent(new CustomEvent(Hook.BEFORE_UPDATE, { detail: object }));
     const result = await DB.execute(sql, parameters as Primitive[]);
     if (result.lastInsertId) object.id = result.lastInsertId;
     this.dispatchEvent(new CustomEvent(Hook.AFTER_UPDATE, { detail: object }));
-    if (result.affectedRows === 0) this.#logger.warn({ method: "update", sql: clean(sql), warning: "Update had no affected rows" });
-    if (result.affectedRows! > 1) this.#logger.warn({ method: "update", sql: clean(sql), warning: "Update had more than one affected rows" });
+    if (result.affectedRows === 0) DB.logger.warn({ method: "update", sql: clean(sql), warning: "Update had no affected rows" });
+    if (result.affectedRows! > 1) DB.logger.warn({ method: "update", sql: clean(sql), warning: "Update had more than one affected rows" });
     return result.affectedRows === 1 ? object as T : undefined;
   }
 

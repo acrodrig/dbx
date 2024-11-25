@@ -18,7 +18,7 @@ export async function dbInit(type: string, schemas?: Schema[]) {
   const database = sqlite ? ":memory:" : "dbx";
 
   try {
-    await DB.connect({ type, hostname, database, username: "dbx", quiet: true }, schemas);
+    await DB.connect({ type, hostname, database, username: "dbx" }, schemas);
     if (sqlite) await dbExec(Deno.readTextFileSync(import.meta.dirname + "/helpers.sql"));
     if (schemas) await createTables(schemas);
   } catch (ex) {
@@ -34,7 +34,7 @@ export async function dbInit(type: string, schemas?: Schema[]) {
 export async function dbExec(sql: string) {
   for (const expr of sql.split(";")) {
     if (expr.trim().length === 0) continue;
-    await DB.execute(expr);
+    await DB.execute(expr, undefined, false);
   }
 }
 

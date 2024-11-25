@@ -1,5 +1,5 @@
-import { blue, white } from "@std/fmt/colors";
-import { ConsoleHandler, getLogger } from "@std/log";
+import { blue, bold, white } from "@std/fmt/colors";
+import { ConsoleHandler, getLogger, LevelName } from "@std/log";
 import { DDL } from "./ddl.ts";
 import { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
@@ -40,8 +40,8 @@ type Provider = Values<typeof Provider>;
 export interface Client {
   type: string;
   close(): Promise<void>;
-  execute(sql: string, parameters?: Parameter[]): Promise<{ affectedRows?: number; lastInsertId?: number }>;
-  query(sql: string, parameters?: Parameter[]): Promise<Row[]>;
+  execute(sql: string, parameters?: Parameter[], debug?: boolean): Promise<{ affectedRows?: number; lastInsertId?: number }>;
+  query(sql: string, parameters?: Parameter[], debug?: boolean): Promise<Row[]>;
 }
 
 export interface ClientConfig {
@@ -55,13 +55,16 @@ export interface ClientConfig {
   password?: string;
   poolSize?: number;
   port?: number;
-  quiet?: boolean;
   socketPath?: string;
   username?: string;
   timeout?: number;
 }
 
 async function connect(config: ClientConfig): Promise<Client> {
+  // Set the debug flag
+  DB.debug = Deno.env.get("DEBUG")?.includes("dbx") || config.debug || false;
+
+  // MySQL
   if (config.type === Provider.MYSQL) {
     if (!config.debug) await configLogger({ enable: false });
     config = Object.assign(config, { db: config.database });
@@ -80,6 +83,8 @@ async function connect(config: ClientConfig): Promise<Client> {
       }
     }();
   }
+
+  // MySQL2
   if (config.type === Provider.MYSQL2) {
     const nativeClient = await createConnection({
       host: config.hostname ?? "127.0.0.1",
@@ -104,6 +109,8 @@ async function connect(config: ClientConfig): Promise<Client> {
       }
     }();
   }
+
+  // Postgres
   if (config.type === Provider.POSTGRES) {
     config = Object.assign(config, { user: config.username });
     const nativeClient = await new PostgresClient(config, config.poolSize ?? 1).connect();
@@ -122,6 +129,8 @@ async function connect(config: ClientConfig): Promise<Client> {
       }
     }();
   }
+
+  // Sqlite
   if (config.type === Provider.SQLITE) {
     const nativeClient = new SQLiteClient(config.database ?? Deno.env.get("DB_FILE") ?? ":memory:");
     return new class implements Client {
@@ -147,11 +156,10 @@ export class DB {
   static Hook = Hook;
   static Provider = Provider;
   static readonly ALL = Number.MAX_SAFE_INTEGER;
-  static clientConfig: ClientConfig;
   static client: Client;
+  static debug = false;
   static schemas = new Map<string, Schema>();
   static type: string;
-  static quiet?: boolean;
   static capacity = this.DEFAULT_CAPACITY;
 
   static get logger() {
@@ -159,11 +167,12 @@ export class DB {
   }
 
   // Get parent logger and if the logger has not been set, it will add a handler and level
-  static mainLogger(autoInit = true) {
+  static mainLogger(level: LevelName = "INFO") {
     const logger = getLogger("gateways");
-    if (logger.levelName !== "NOTSET" || !autoInit) return logger;
-    logger.levelName = "INFO";
-    logger.handlers.push(new ConsoleHandler("DEBUG"));
+    if (logger.handlers.length === 0) logger.handlers.push(new ConsoleHandler("DEBUG"));
+    const debug = Deno.env.get("DEBUG")?.includes(logger.loggerName) || this.debug;
+    if (debug) logger.levelName = "DEBUG";
+    if (logger.levelName !== level) logger.levelName = level;
     return logger;
   }
 
@@ -176,9 +185,6 @@ export class DB {
     // By default, we add a cache
     this.capacity = config.cache === undefined ? this.DEFAULT_CAPACITY : config.cache;
 
-    // By default, print to stdout
-    this.quiet = config.quiet === undefined ? !Deno.stdout.isTerminal() : config.quiet;
-
     // Iterate over the schemas and map them by name and type if it exists
     schemas?.forEach((s) => {
       DB.schemas.set(s.name, s);
@@ -189,7 +195,7 @@ export class DB {
     DB.client = await connect(config);
 
     // Should wrap in debugger?
-    if (!config.quiet) DB.client = new DebugClient(DB.client);
+    if (this.debug) DB.client = new DebugClient(DB.client);
 
     return DB.client;
   }
@@ -219,7 +225,7 @@ export class DB {
     return sql;
   }
 
-  static async query(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug = false): Promise<Row[]> {
+  static async query(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug?: boolean): Promise<Row[]> {
     // If values are not an array, they need to be transformed (as well as the SQL)
     const arrayParameters: Parameter[] = [];
     if (parameters && !Array.isArray(parameters)) {
@@ -228,13 +234,13 @@ export class DB {
     }
     if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
-    this.logger.debug({ method: "query", sql: clean(sql), parameters });
+    if (debug !== false) this.logger.debug({ method: "query", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "query", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
     try {
       // Need to await to be able to catch potential errors
-      return await DB.client.query(DB._sqlFilter(sql), parameters);
+      return await DB.client.query(DB._sqlFilter(sql), parameters, debug);
     } catch (ex) {
       if (TTY) DB.error(ex as Error, sql, parameters);
       this.logger.error({ method: "query", sql: clean(sql), parameters, error: (ex as Error).message, stack: (ex as Error).stack });
@@ -242,7 +248,7 @@ export class DB {
     }
   }
 
-  static execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug = false) {
+  static execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug?: boolean) {
     // If values are not an array, they need to be transformed (as well as the SQL)
     const arrayParameters: Parameter[] = [];
     if (parameters && !Array.isArray(parameters)) {
@@ -251,13 +257,13 @@ export class DB {
     }
     if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
-    this.logger.debug({ method: "execute", sql: clean(sql), parameters });
+    if (debug !== false) this.logger.debug({ method: "execute", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "execute", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
     try {
       // Need to await to be able to catch potential errors
-      return DB.client.execute(DB._sqlFilter(sql), parameters);
+      return DB.client.execute(DB._sqlFilter(sql), parameters, debug);
     } catch (ex) {
       if (TTY) DB.error(ex as Error, sql, parameters);
       this.logger.error({ method: "execute", sql: clean(sql), parameters, error: (ex as Error).message, stack: (ex as Error).stack });
@@ -306,35 +312,38 @@ export class DB {
 }
 
 // Debug Client
+// deno-fmt-ignore
+const RESERVED = ["ACCESSIBLE","ADD","ALL","ALTER","ANALYZE","AND","AS","ASC","ASENSITIVE","BEFORE","BETWEEN","BIGINT","BINARY","BLOB","BOTH","BY","CALL","CASCADE","CASE","CHANGE","CHAR","CHARACTER","CHECK","COLLATE","COLUMN","CONDITION","CONSTRAINT","CONTINUE","CONVERT","CREATE","CROSS","CUBE","CUME_DIST","CURRENT_DATE","CURRENT_TIME","CURRENT_TIMESTAMP","CURRENT_USER","CURSOR","DATABASE","DATABASES","DAY_HOUR","DAY_MICROSECOND","DAY_MINUTE","DAY_SECOND","DEC","DECIMAL","DECLARE","DEFAULT","DELAYED","DELETE","DENSE_RANK","DESC","DESCRIBE","DETERMINISTIC","DISTINCT","DISTINCTROW","DIV","DOUBLE","DROP","DUAL","EACH","ELSE","ELSEIF","EMPTY","ENCLOSED","ESCAPED","EXCEPT","EXISTS","EXIT","EXPLAIN","FALSE","FETCH","FIRST_VALUE","FLOAT","FLOAT4","FLOAT8","FOR","FORCE","FOREIGN","FROM","FULLTEXT","FUNCTION","GENERATED","GET","GRANT","GROUP","GROUPING","GROUPS","HAVING","HIGH_PRIORITY","HOUR_MICROSECOND","HOUR_MINUTE","HOUR_SECOND","IF","IGNORE","IN","INDEX","INFILE","INNER","INOUT","INSENSITIVE","INSERT","INT","INT1","INT2","INT3","INT4","INT8","INTEGER","INTERSECT","INTERVAL","INTO","IO_AFTER_GTIDS","IO_BEFORE_GTIDS","IS","ITERATE","JOIN","JSON_TABLE","KEY","KEYS","KILL","LAG","LAST_VALUE","LATERAL","LEAD","LEADING","LEAVE","LEFT","LIKE","LIMIT","LINEAR","LINES","LOAD","LOCALTIME","LOCALTIMESTAMP","LOCK","LONG","LONGBLOB","LONGTEXT","LOOP","LOW_PRIORITY","MASTER_BIND","MASTER_SSL_VERIFY_SERVER_CERT","MATCH","MAXVALUE","MEDIUMBLOB","MEDIUMINT","MEDIUMTEXT","MIDDLEINT","MINUTE_MICROSECOND","MINUTE_SECOND","MOD","MODIFIES","NATURAL","NOT","NO_WRITE_TO_BINLOG","NTH_VALUE","NTILE","NULL","NUMERIC","OF","ON","OPTIMIZE","OPTIMIZER_COSTS","OPTION","OPTIONALLY","OR","ORDER","OUT","OUTER","OUTFILE","OVER","PARTITION","PERCENT_RANK","PRECISION","PRIMARY","PROCEDURE","PURGE","RANGE","RANK","READ","READS","READ_WRITE","REAL","RECURSIVE","REFERENCES","REGEXP","RELEASE","RENAME","REPEAT","REPLACE","REQUIRE","RESIGNAL","RESTRICT","RETURN","REVOKE","RIGHT","RLIKE","ROW","ROWS","ROW_NUMBER","SCHEMA","SCHEMAS","SECOND_MICROSECOND","SELECT","SENSITIVE","SEPARATOR","SET","SHOW","SIGNAL","SMALLINT","SPATIAL","SPECIFIC","SQL","SQLEXCEPTION","SQLSTATE","SQLWARNING","SQL_BIG_RESULT","SQL_CALC_FOUND_ROWS","SQL_SMALL_RESULT","SSL","STARTING","STORED","STRAIGHT_JOIN","SYSTEM","TABLE","TERMINATED","THEN","TINYBLOB","TINYINT","TINYTEXT","TO","TRAILING","TRIGGER","TRUE","UNDO","UNION","UNIQUE","UNLOCK","UNSIGNED","UPDATE","USAGE","USE","USING","UTC_DATE","UTC_TIME","UTC_TIMESTAMP","VALUES","VARBINARY","VARCHAR","VARCHARACTER","VARYING","VIRTUAL","WHEN","WHERE","WHILE","WINDOW","WITH","WRITE","XOR","YEAR_MONTH","ZEROFILL"];
+
 class DebugClient implements Client {
   type: string;
+  reserved: RegExp;
   constructor(private client: Client) {
     this.type = client.type;
+    this.reserved = new RegExp("\\b(" + RESERVED.join("|") + ")\\b", "g");
   }
   close(): Promise<void> {
     return this.client.close();
   }
-  async execute(sql: string, parameters?: Parameter[]): Promise<{ affectedRows?: number; lastInsertId?: number }> {
+  async execute(sql: string, parameters?: Parameter[], debug?: boolean): Promise<{ affectedRows?: number; lastInsertId?: number }> {
     const start = Date.now();
     const result = await this.client.execute(sql, parameters);
-    this.debug(sql, parameters ?? [], result.affectedRows ?? 0, start);
+    if (debug !== false) this.debug(sql, parameters ?? [], result.affectedRows ?? 0, start);
     return result;
   }
-  async query(sql: string, parameters?: Parameter[]): Promise<Row[]> {
+  async query(sql: string, parameters?: Parameter[], debug?: boolean): Promise<Row[]> {
     const start = Date.now();
     const result = await this.client.query(sql, parameters);
-    this.debug(sql, parameters ?? [], result.length ?? 0, start);
+    if (debug !== false) this.debug(sql, parameters ?? [], result.length ?? 0, start);
     return result;
   }
   debug(sql: string, parameters: Parameter[], rows: number, start: number, indent = "", pad = 20) {
-    // The flag can be turned off programatically, so we test once more
-    if (DB.quiet) return;
-
     // If the flag is ON will debug to console
     const time = "(" + rows + " row" + (rows === 1 ? "" : "s") + " in " + (Date.now() - start) + "ms)";
     let i = 0;
     sql = sql.replace(/\?/g, () => blue(String(i < parameters.length ? parameters[i++] : "⚠️")));
-    console.debug(indent + "🛢️ " + white(time.padStart(pad)) + " " + sql);
+    sql = sql.replace(this.reserved, (w) => bold(w));
+    console.debug(indent + "🛢️ " + white(time.padStart(pad)) + " " + sql.trim());
   }
 }
 
