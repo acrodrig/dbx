@@ -8,24 +8,23 @@ env:
 
 jobs:
   build:
-    name: Continuous Integration
     runs-on: ubuntu-latest
     steps:
       # Check out the code
       - uses: actions/checkout@v4
 
       # Setup deno
-      - uses: denoland/setup-deno@v1
+      - uses: denoland/setup-deno@v2
 
       # Run testsm collect code coverage and generate report from the collected coverage
       - run: deno test --allow-all --coverage=cov/
       - run: deno coverage --lcov cov/ > cov.lcov
 
       # Upload to Codecov (see https://github.com/marketplace/actions/codecov)
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: cov.lcov
+          files: cov.lcov
           fail_ci_if_error: true
 
       # Check that code is correctly formatted
