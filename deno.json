@@ -8,11 +8,7 @@
     "@std/collections": "jsr:@std/collections@^1",
     "@std/fmt": "jsr:@std/fmt@^1",
     "@std/log": "jsr:@std/log@^0",
-    "schema": "npm:@types/json-schema/7.0.15",
-    "mysql": "https://deno.land/x/mysql@v2.12.1/mod.ts",
-    "postgres": "https://deno.land/x/postgres@v0.19.3/mod.ts",
-    "sqlite": "https://deno.land/x/sqlite@v3.9.1/mod.ts",
-    "mysql2": "npm:mysql2@^3.11/promise"
+    "schema": "npm:@types/json-schema/7.0.15"
   },
   "lock": false,
   "tasks": {
@@ -21,6 +17,7 @@
     "release": "release",
     "test": "deno test -A",
     "test-mysql": "./test/test-mysql.sh",
+    "test-mysql2": "./test/test-mysql2.sh",
     "test-postgres": "./test/test-postgres.sh"
   }
 }

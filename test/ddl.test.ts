@@ -69,7 +69,7 @@ CREATE INDEX accounts_valueList ON accounts (id,(CAST(valueList AS CHAR(32) ARRA
 CREATE FULLTEXT INDEX accounts_fulltext ON accounts (comments,country,phone,name);
 `.trim();
 
-test("Table Creation MySQL", function () {
+test("Table Creation MySQL/MySQL2", function () {
   const ddl = DDL.createTable(AccountSchema as Schema, "mysql", "accounts");
   if (DEBUG) console.log(`\nMYSQL\n${HR}\n${ddl}\n\n`);
   assertEquals(ddl.trim(), MYSQL);

@@ -27,7 +27,7 @@ docker exec -it "$NAME" psql dbx postgres -q -c "$SQL"
 # Run MySQL tests
 echo "🧪 Running Tests ..."
 echo "------------------------------------------------------------------------------"
-TEST_PROVIDER=postgres TEST_PORT="$PORT" deno test -A --unstable
+TEST_PROVIDER="$NAME" TEST_PORT="$PORT" deno test -A --unstable
 echo "------------------------------------------------------------------------------"
 
 # Stop and delete the container

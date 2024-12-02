@@ -1,14 +1,14 @@
 #!/bin/bash
 
 PORT="13306"
-NAME="mysql"
+NAME="mysql2"
 
 # Is docker running?
 (docker info --format json | jq -e '.ServerVersion != null and .ServerVersion != ""') || { echo "❌ Docker is not running! Make sure it is up."; exit 1; }
 
 # Start a MySQL container on port 13306 with empty password
 echo -n "🛢️  Starting Database Container ... "
-docker run -p "$PORT":3306 -e MYSQL_ALLOW_EMPTY_PASSWORD=1 -e MYSQL_AUTHENTICATION_PLUGIN="mysql_native_password" --rm --name="$NAME" -d mysql:latest
+docker run -p "$PORT":3306 -e MYSQL_ALLOW_EMPTY_PASSWORD=1 --rm --name="$NAME" -d mysql:latest
 
 # Wait for MySQL to start (\use IP as host to prevent socket file)
 echo -n "😴 Waiting for container to be ready ... "

@@ -4,12 +4,6 @@ import { DDL } from "./ddl.ts";
 import { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
 
-// See https://github.com/eveningkid/denodb/blob/master/deps.ts
-import { Client as MySQLClient, configLogger } from "mysql";
-import { DB as SQLiteClient, QueryParameterSet } from "sqlite";
-import { Pool as PostgresClient } from "postgres";
-import { createConnection, type ResultSetHeader } from "mysql2";
-
 const TTY = Deno.stderr.isTerminal();
 
 // See https://stackoverflow.com/questions/49285864/is-there-a-valueof-similar-to-keyof-in-typescript
@@ -66,10 +60,11 @@ async function connect(config: ClientConfig): Promise<Client> {
 
   // MySQL
   if (config.type === Provider.MYSQL) {
-    if (!config.debug) await configLogger({ enable: false });
+    const mysql = await import("https://deno.land/x/mysql@v2.12.1/mod.ts");
+    if (!config.debug) await mysql.configLogger({ enable: false });
     config = Object.assign(config, { db: config.database });
     if (!config.charset) config.charset = "utf8mb4";
-    const nativeClient = await new MySQLClient().connect(config);
+    const nativeClient = await new mysql.Client().connect(config);
     return new class implements Client {
       type = config.type;
       close() {
@@ -86,7 +81,8 @@ async function connect(config: ClientConfig): Promise<Client> {
 
   // MySQL2
   if (config.type === Provider.MYSQL2) {
-    const nativeClient = await createConnection({
+    const mysql2 = await import("npm:mysql2@^3.11/promise");
+    const nativeClient = await mysql2.createConnection({
       host: config.hostname ?? "127.0.0.1",
       database: config.database,
       user: config.username,
@@ -101,7 +97,7 @@ async function connect(config: ClientConfig): Promise<Client> {
       }
       async execute(sql: string, parameters?: Parameter[]) {
         const [rsh] = await (nativeClient as any).execute(sql, parameters);
-        return { affectedRows: (rsh as ResultSetHeader).affectedRows, lastInsertId: (rsh as ResultSetHeader).insertId };
+        return { affectedRows: (rsh as any).affectedRows, lastInsertId: (rsh as any).insertId };
       }
       async query(sql: string, parameters?: Parameter[]) {
         const [rows] = await (nativeClient as any).query(sql, parameters);
@@ -112,8 +108,9 @@ async function connect(config: ClientConfig): Promise<Client> {
 
   // Postgres
   if (config.type === Provider.POSTGRES) {
+    const postgres = await import("https://deno.land/x/postgres@v0.19.3/mod.ts");
     config = Object.assign(config, { user: config.username });
-    const nativeClient = await new PostgresClient(config, config.poolSize ?? 1).connect();
+    const nativeClient = await new postgres.Pool(config, config.poolSize ?? 1).connect();
     return new class implements Client {
       type = config.type;
       close() {
@@ -132,7 +129,8 @@ async function connect(config: ClientConfig): Promise<Client> {
 
   // Sqlite
   if (config.type === Provider.SQLITE) {
-    const nativeClient = new SQLiteClient(config.database ?? Deno.env.get("DB_FILE") ?? ":memory:");
+    const sqlite = await import("https://deno.land/x/sqlite@v3.9.1/mod.ts");
+    const nativeClient = new sqlite.DB(config.database ?? Deno.env.get("DB_FILE") ?? ":memory:");
     return new class implements Client {
       type = config.type;
       close() {
@@ -140,11 +138,11 @@ async function connect(config: ClientConfig): Promise<Client> {
         return Promise.resolve();
       }
       execute(sql: string, parameters?: Parameter[]) {
-        nativeClient.query(sql, parameters as QueryParameterSet);
+        nativeClient.query(sql, parameters as any);
         return Promise.resolve({ affectedRows: nativeClient.changes, lastInsertId: nativeClient.lastInsertRowId });
       }
       query(sql: string, parameters?: Parameter[]) {
-        return Promise.resolve(nativeClient.queryEntries(sql, parameters as QueryParameterSet));
+        return Promise.resolve(nativeClient.queryEntries(sql, parameters as any));
       }
     }();
   }
