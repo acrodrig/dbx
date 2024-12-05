@@ -96,10 +96,13 @@ async function connect(config: ClientConfig): Promise<Client> {
         return Promise.resolve();
       }
       async execute(sql: string, parameters?: Parameter[]) {
+        // deno-lint-ignore no-explicit-any
         const [rsh] = await (nativeClient as any).execute(sql, parameters);
+        // deno-lint-ignore no-explicit-any
         return { affectedRows: (rsh as any).affectedRows, lastInsertId: (rsh as any).insertId };
       }
       async query(sql: string, parameters?: Parameter[]) {
+        // deno-lint-ignore no-explicit-any
         const [rows] = await (nativeClient as any).query(sql, parameters);
         return rows as Row[];
       }
@@ -138,10 +141,12 @@ async function connect(config: ClientConfig): Promise<Client> {
         return Promise.resolve();
       }
       execute(sql: string, parameters?: Parameter[]) {
+        // deno-lint-ignore no-explicit-any
         nativeClient.query(sql, parameters as any);
         return Promise.resolve({ affectedRows: nativeClient.changes, lastInsertId: nativeClient.lastInsertRowId });
       }
       query(sql: string, parameters?: Parameter[]) {
+        // deno-lint-ignore no-explicit-any
         return Promise.resolve(nativeClient.queryEntries(sql, parameters as any));
       }
     }();

@@ -153,7 +153,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
     // This is the only method where full text search is permitted (it could be disastrous in DELETE for example)
     const properties = this.schema?.properties ?? {};
-    const fullTextColumns = Object.entries(properties).filter(([n, p]) => p.fullText).map(([n, _]) => n);
+    const fullTextColumns = Object.entries(properties).filter(([_, p]) => p.fullText).map(([n, _]) => n);
     if (DB.type === DB.Provider.SQLITE) fullTextColumns.length = 0;
 
     // Build SQL (if there is a select, clean it to prevent SQL injection)

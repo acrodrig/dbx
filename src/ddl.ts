@@ -157,7 +157,7 @@ export class DDL {
     if (schema.indices) sql += "\n" + schema.indices?.map((i) => this.createIndex(dbType, i, 0, table)).join("");
 
     // Full text index
-    const fullTextColumns = Object.entries(schema.properties).filter(([n, c]) => c.fullText).map(([n, _]) => n);
+    const fullTextColumns = Object.entries(schema.properties).filter(([_, c]) => c.fullText).map(([n, _]) => n);
     if (fullTextColumns.length) sql += this.createFullTextIndex(dbType, fullTextColumns, 0, table);
 
     const fixDanglingComma = (sql: string) => sql.replace(/,\n\)/, "\n);");
