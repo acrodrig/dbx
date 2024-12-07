@@ -23,6 +23,10 @@ test("Test _transformParameters", function () {
   assertEquals(transformParameters("WHERE a = :a AND b = :b", { a: 1, b: 2 }, array = []), "WHERE a = ? AND b = ?");
   assertEquals(array, [1, 2]);
 
+  // Long parameter names
+  assertEquals(transformParameters("WHERE a = :first AND b = :second", { first: 1, second: 2 }, array = []), "WHERE a = ? AND b = ?");
+  assertEquals(array, [1, 2]);
+
   // Multiple uses of one valriable
   assertEquals(transformParameters("WHERE a = :a AND b = :b AND c BETWEEN :a AND :b", { a: 1, b: 2 }, array = []), "WHERE a = ? AND b = ? AND c BETWEEN ? AND ?");
   assertEquals(array, [1, 2, 1, 2]);
