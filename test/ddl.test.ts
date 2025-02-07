@@ -8,8 +8,6 @@ import AccountSchema from "../resources/account.json" with { type: "json" };
 
 // See https://github.com/denoland/deno_std/blob/main/testing/_diff_test.ts
 
-const test = Deno.test;
-
 const DEBUG = Deno.env.get("DEBUG") !== undefined;
 const HR = "-".repeat(80);
 
@@ -37,7 +35,7 @@ CREATE INDEX accounts_updated ON accounts (updated);
 CREATE INDEX accounts_valueList ON accounts (id,(CAST(valueList AS CHAR(32))),enabled);
 `.trim();
 
-test("Table Creation SQLite", function () {
+Deno.test("Table Creation SQLite", function () {
   const ddl = DDL.createTable(AccountSchema as Schema, "sqlite", "accounts");
   if (DEBUG) console.log(`\nSQLite\n${HR}\n${ddl}\n\n`);
   assertEquals(ddl.trim(), SQLITE);
@@ -69,7 +67,7 @@ CREATE INDEX accounts_valueList ON accounts (id,(CAST(valueList AS CHAR(32) ARRA
 CREATE FULLTEXT INDEX accounts_fulltext ON accounts (comments,country,phone,name);
 `.trim();
 
-test("Table Creation MySQL/MySQL2", function () {
+Deno.test("Table Creation MySQL/MySQL2", function () {
   const ddl = DDL.createTable(AccountSchema as Schema, "mysql", "accounts");
   if (DEBUG) console.log(`\nMYSQL\n${HR}\n${ddl}\n\n`);
   assertEquals(ddl.trim(), MYSQL);
@@ -101,14 +99,14 @@ CREATE INDEX accounts_valueList ON accounts (id,(CAST(valueList AS CHAR(32))),en
 CREATE INDEX accounts_fulltext ON accounts USING GIN (TO_TSVECTOR('english', COALESCE(comments,'')||' '||COALESCE(country,'')||' '||COALESCE(phone,'')||' '||COALESCE(name,'')));
 `.trim();
 
-test("Table Creation Postgres", function () {
+Deno.test("Table Creation Postgres", function () {
   const ddl = DDL.createTable(AccountSchema as Schema, "postgres");
   if (DEBUG) console.log(`\nPostgres\n${HR}\n${ddl}\n\n`);
   assertEquals(ddl.trim(), POSTGRES);
 });
 
 // Execute the table creation on the provided platform
-test("Actual Table", async function () {
+Deno.test("Actual Table", async function () {
   const provider = getProvider();
   await createTables([AccountSchema as Schema]);
 

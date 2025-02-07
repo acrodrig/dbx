@@ -10,13 +10,11 @@ I decided that things could be made simpler (yes, I [know how standards prolifer
 
 ## Tenets:
 
-- Everything should be as simple as possible (but not simpler)**<sup>✻</sup>**
+- Everything should be as simple as possible (but not simpler)
 - Provide a thin layer on top of SQL to support common cases (80%), and SQL for the complex rest (20%)
-- Use existing standards for describing schemas (such as [JSON schema](https://json-schema.org))) instead of inventing another (looking at you Prisma)
+- Use existing standards for describing schemas (such as [JSON schema](https://json-schema.org)) instead of inventing another (looking at you Prisma)
 - Make good use of "newish" (or at least newly implemented in MYSQL) DB features such as constraint checks
 - Prefer [DataMapper](https://typeorm.io/active-record-data-mapper#what-is-the-data-mapper-pattern) to [ActiveRecord](https://typeorm.io/active-record-data-mapper#what-is-the-active-record-pattern) ("leave my classes alone")
-
-**✻** Shamelessly appropriated, don't know from [whom](https://quoteinvestigator.com/2011/05/13/einstein-simple/).
 
 
 ## Uses
@@ -26,7 +24,7 @@ I decided that things could be made simpler (yes, I [know how standards prolifer
 Quickly start using without schema/configuration:
 
 ```typescript
-import DB from "https://deno.land/x/dex/mod.ts";
+import DB from "jsr:@acr/dbx";
 
 // Class will be stored in a table with an auto increment ID
 class User {

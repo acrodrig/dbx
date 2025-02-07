@@ -40,7 +40,6 @@ export interface Client {
 
 export interface ClientConfig {
   type: string;
-  cache?: number;
   charset?: string;
   database?: string;
   debug?: boolean;
@@ -155,7 +154,6 @@ async function connect(config: ClientConfig): Promise<Client> {
 }
 
 export class DB {
-  static DEFAULT_CAPACITY = 1000;
   static Hook = Hook;
   static Provider = Provider;
   static readonly ALL = Number.MAX_SAFE_INTEGER;
@@ -163,7 +161,6 @@ export class DB {
   static debug = false;
   static #schemas = new Map<string, Schema>();
   static type: string;
-  static capacity = this.DEFAULT_CAPACITY;
 
   static get logger(): Logger {
     return this.mainLogger();
@@ -185,9 +182,6 @@ export class DB {
   };
 
   static async connect(config: ClientConfig, schemas?: Schema[]): Promise<Client> {
-    // By default, we add a cache
-    this.capacity = config.cache === undefined ? this.DEFAULT_CAPACITY : config.cache;
-
     // Iterate over the schemas and map them by name and type if it exists
     schemas?.forEach((s) => {
       DB.#schemas.set(s.name, s);
@@ -298,7 +292,7 @@ export class DB {
     const name = typeof target === "string" ? target : target.name;
     if (typeof target === "string") target = Object as unknown as Class<T>;
     if (!schema) schema = DB.#schemas.get(name);
-    repository = new Repository(target, schema, schema?.name ?? name, this.capacity);
+    repository = new Repository(target, schema, schema?.name ?? name);
     this.#repositories.set(target, repository as Repository<Identifiable>);
 
     // Return repository

@@ -17,10 +17,6 @@ let id = -1;
 
 const repo = DB.getRepository(AccountModel);
 
-test("Default repository has 1,000 capacity", options, function () {
-  assertEquals(repo.capacity, DB.DEFAULT_CAPACITY);
-});
-
 test("Basic entity store/retrieve", options, async function () {
   let account = new AccountModel({ name: NAME });
 

@@ -3,7 +3,6 @@
 import { assert, assertEquals } from "@std/assert";
 import { dbExec, dbInit, getProvider } from "./helpers.ts";
 
-const test = Deno.test;
 const options = { sanitizeResources: false, sanitizeOps: false };
 
 // See https://lucy-kim.github.io/pages/learn-mySQL.html
@@ -27,23 +26,23 @@ try {
   Deno.exit(1);
 }
 
-test("Ensure DB data", options, async function () {
+Deno.test("Ensure DB data", options, async function () {
   const rows = await DB.query("SELECT 1 FROM employees");
   assertEquals(rows.length, 14);
 });
 
-test("Select all employees", options, async function () {
+Deno.test("Select all employees", options, async function () {
   const employees = await repo.all();
   assertEquals(employees.length, 14);
 });
 
-test("Select employees with salary less than 1000", options, async function () {
+Deno.test("Select employees with salary less than 1000", options, async function () {
   const employees = await repo.find({ where: { salary: { lt: 1000 } } });
   assertEquals(employees.length, 2);
   assert(employees.every((e) => e.salary < 1000));
 });
 
-test("Query employees with salary more than 1000", options, async function () {
+Deno.test("Query employees with salary more than 1000", options, async function () {
   const employees = await DB.query("SELECT * FROM employees WHERE salary > :minSal", { minSal: 1000 });
   assertEquals(employees.length, 12);
 });

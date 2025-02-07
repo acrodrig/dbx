@@ -4,9 +4,7 @@ import { assertEquals, assertThrows } from "@std/assert";
 import { Repository } from "../src/repository.ts";
 import DB from "../src/db.ts";
 
-const test = Deno.test;
-
-test("Test _where (with NO META ??)", function () {
+Deno.test("Test _where (with NO META ??)", function () {
   const where = Repository._where, now = new Date();
   let tree: unknown[];
   assertEquals(where({ a: 1, b: 2 }, tree = []), "a = ? AND b = ?");
@@ -15,7 +13,7 @@ test("Test _where (with NO META ??)", function () {
   assertEquals(tree, [null, 3, "X", now]);
 });
 
-test("Test _transformParameters", function () {
+Deno.test("Test _transformParameters", function () {
   const transformParameters = DB._transformParameters;
   let array: unknown[];
 
