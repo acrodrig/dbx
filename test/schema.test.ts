@@ -1,11 +1,9 @@
 #!/usr/bin/env -S deno test -A --check
 
-import { JSONSchema7 } from "schema";
+import type { JSONSchema7 } from "schema";
 import AccountSchema from "../resources/account.json" with { type: "json" };
 
-const test = Deno.test;
-
-test("Schema Types are proper JSON Schema", function () {
+Deno.test("Schema Types are proper JSON Schema", function () {
   // Validate that property is a JSON Schema
   const _schema = AccountSchema as JSONSchema7;
 

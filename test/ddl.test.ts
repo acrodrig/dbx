@@ -1,8 +1,8 @@
 #!/usr/bin/env -S deno test -A --no-check
 
 import { assertEquals } from "@std/assert";
-import { Schema } from "../src/types.ts";
 import { DDL } from "../src/ddl.ts";
+import type { Schema } from "../src/types.ts";
 import { createTables, dbInit, getProvider } from "./helpers.ts";
 import AccountSchema from "../resources/account.json" with { type: "json" };
 

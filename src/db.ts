@@ -1,7 +1,7 @@
 import { blue, bold, white } from "@std/fmt/colors";
-import { ConsoleHandler, getLogger, LevelName } from "@std/log";
+import { ConsoleHandler, getLogger, type LevelName, type Logger } from "@std/log";
 import { DDL } from "./ddl.ts";
-import { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
+import type { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
 
 const TTY = Deno.stderr.isTerminal();
@@ -161,16 +161,16 @@ export class DB {
   static readonly ALL = Number.MAX_SAFE_INTEGER;
   static client: Client;
   static debug = false;
-  static schemas = new Map<string, Schema>();
+  static #schemas = new Map<string, Schema>();
   static type: string;
   static capacity = this.DEFAULT_CAPACITY;
 
-  static get logger() {
+  static get logger(): Logger {
     return this.mainLogger();
   }
 
   // Get parent logger and if the logger has not been set, it will add a handler and level
-  static mainLogger(level: LevelName = "INFO") {
+  static mainLogger(level: LevelName = "INFO"): Logger {
     const logger = getLogger("gateways");
     if (logger.handlers.length === 0) logger.handlers.push(new ConsoleHandler("DEBUG"));
     const debug = Deno.env.get("DEBUG")?.includes(logger.loggerName) || this.debug;
@@ -190,8 +190,8 @@ export class DB {
 
     // Iterate over the schemas and map them by name and type if it exists
     schemas?.forEach((s) => {
-      DB.schemas.set(s.name, s);
-      if (s.type) DB.schemas.set(s.type, s);
+      DB.#schemas.set(s.name, s);
+      if (s.type) DB.#schemas.set(s.type, s);
     });
     if (DB.client) return Promise.resolve(DB.client);
     DB.type = config.type;
@@ -251,7 +251,7 @@ export class DB {
     }
   }
 
-  static execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug?: boolean) {
+  static execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug?: boolean): Promise<{ affectedRows?: number; lastInsertId?: number }> {
     // If values are not an array, they need to be transformed (as well as the SQL)
     const arrayParameters: Parameter[] = [];
     if (parameters && !Array.isArray(parameters)) {
@@ -285,21 +285,21 @@ export class DB {
   }
 
   // Repository cache
-  static repositories = new Map<string | Class<Identifiable>, Repository<Identifiable>>();
+  static #repositories = new Map<string | Class<Identifiable>, Repository<Identifiable>>();
 
   // deno-lint-ignore no-explicit-any
   static getRepository(tableName: string): Repository<any>;
   static getRepository<T extends Identifiable>(target: Class<T>): Repository<T>;
   static getRepository<T extends Identifiable>(target: string | Class<T>, schema?: Schema): Repository<T> {
-    let repository = this.repositories.get(target) as Repository<T>;
+    let repository = this.#repositories.get(target) as Repository<T>;
     if (repository) return repository;
 
     // Figure out target, schema and name
     const name = typeof target === "string" ? target : target.name;
     if (typeof target === "string") target = Object as unknown as Class<T>;
-    if (!schema) schema = DB.schemas.get(name);
+    if (!schema) schema = DB.#schemas.get(name);
     repository = new Repository(target, schema, schema?.name ?? name, this.capacity);
-    this.repositories.set(target, repository as Repository<Identifiable>);
+    this.#repositories.set(target, repository as Repository<Identifiable>);
 
     // Return repository
     return repository;

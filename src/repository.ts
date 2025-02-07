@@ -1,6 +1,6 @@
 import { assert } from "@std/assert";
 import { DB } from "./db.ts";
-import { Class, Condition, Filter, Identifiable, Order, Primitive, Schema, Where } from "./types.ts";
+import type { Class, Condition, Filter, Identifiable, Order, Primitive, Schema, Where } from "./types.ts";
 
 // Import direct version so that version plays well with other modules
 // TODO: Port mnemonist to deno land?

@@ -1,4 +1,4 @@
-import { Column, Constraint, Index, Relation, Schema } from "./types.ts";
+import type { Column, Constraint, Index, Relation, Schema } from "./types.ts";
 import DB from "./db.ts";
 
 const dataTypes = {
@@ -161,14 +161,14 @@ export class DDL {
     if (fullTextColumns.length) sql += this.createFullTextIndex(dbType, fullTextColumns, 0, table);
 
     const fixDanglingComma = (sql: string) => sql.replace(/,\n\)/, "\n);");
-    if (dbType === DB.Provider.POSTGRES) sql = this.postgres(sql);
+    if (dbType === DB.Provider.POSTGRES) sql = this.#postgres(sql);
     sql = fixDanglingComma(sql);
 
     return sql;
   }
 
   // Function to accommodate the differences between MySQL and Postgres
-  static postgres(sql: string) {
+  static #postgres(sql: string) {
     return sql.replace(/\w+/g, (m: string) => {
       if (m === "DATETIME") return "TIMESTAMP";
       if (m === "JSON_EXTRACT") return "JSONB_EXTRACT_PATH";
