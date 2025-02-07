@@ -1,5 +1,6 @@
 {
   "name": "@acr/dbx",
+  "version": "0.9.0",
   "license": "MIT",
   "exports": "./mod.ts",
   "fmt": {
@@ -23,7 +24,6 @@
     "release": "release",
     "test": "deno test -A",
     "test-mysql": "./test/test-mysql.sh",
-    "test-mysql2": "./test/test-mysql2.sh",
     "test-postgres": "./test/test-postgres.sh"
   }
 }

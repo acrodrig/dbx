@@ -4,6 +4,10 @@ import { DDL } from "./ddl.ts";
 import type { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
 
+// Import Driver Types
+import type { Database as SQLite } from "jsr:@db/sqlite";
+import type { Client as Postgres } from "jsr:@dewars/postgres";
+
 const TTY = Deno.stderr.isTerminal();
 
 // See https://stackoverflow.com/questions/49285864/is-there-a-valueof-similar-to-keyof-in-typescript
@@ -25,11 +29,16 @@ const Hook = {
 
 const Provider = {
   MYSQL: "mysql",
-  MYSQL2: "mysql2",
   POSTGRES: "postgres",
   SQLITE: "sqlite",
 } as const;
 type Provider = Values<typeof Provider>;
+
+const Drivers = {
+  MYSQL: "npm:mysql2@^3/promise",
+  POSTGRES: "jsr:@dewars/postgres@0",
+  SQLITE: "jsr:@db/sqlite@0",
+} as const;
 
 export interface Client {
   type: string;
@@ -59,29 +68,8 @@ async function connect(config: ClientConfig): Promise<Client> {
 
   // MySQL
   if (config.type === Provider.MYSQL) {
-    const mysql = await import("https://deno.land/x/mysql@v2.12.1/mod.ts");
-    if (!config.debug) await mysql.configLogger({ enable: false });
-    config = Object.assign(config, { db: config.database });
-    if (!config.charset) config.charset = "utf8mb4";
-    const nativeClient = await new mysql.Client().connect(config);
-    return new class implements Client {
-      type = config.type;
-      close() {
-        return nativeClient.close();
-      }
-      execute(sql: string, parameters?: Parameter[]) {
-        return nativeClient.execute(sql, parameters);
-      }
-      query(sql: string, parameters?: Parameter[]) {
-        return nativeClient.query(sql, parameters);
-      }
-    }();
-  }
-
-  // MySQL2
-  if (config.type === Provider.MYSQL2) {
-    const mysql2 = await import("npm:mysql2@^3.11/promise");
-    const nativeClient = await mysql2.createConnection({
+    const mysql = await import(Drivers.MYSQL);
+    const nativeClient = await mysql.createConnection({
       host: config.hostname ?? "127.0.0.1",
       database: config.database,
       user: config.username,
@@ -91,18 +79,15 @@ async function connect(config: ClientConfig): Promise<Client> {
     return new class implements Client {
       type = config.type;
       close() {
-        // TODO
-        return Promise.resolve();
+        return nativeClient.close();
       }
       async execute(sql: string, parameters?: Parameter[]) {
-        // deno-lint-ignore no-explicit-any
-        const [rsh] = await (nativeClient as any).execute(sql, parameters);
+        const [rsh] = await nativeClient.execute(sql, parameters);
         // deno-lint-ignore no-explicit-any
         return { affectedRows: (rsh as any).affectedRows, lastInsertId: (rsh as any).insertId };
       }
       async query(sql: string, parameters?: Parameter[]) {
-        // deno-lint-ignore no-explicit-any
-        const [rows] = await (nativeClient as any).query(sql, parameters);
+        const [rows] = await nativeClient.query(sql, parameters);
         return rows as Row[];
       }
     }();
@@ -110,13 +95,13 @@ async function connect(config: ClientConfig): Promise<Client> {
 
   // Postgres
   if (config.type === Provider.POSTGRES) {
-    const postgres = await import("https://deno.land/x/postgres@v0.19.3/mod.ts");
+    const postgres = await import(Drivers.POSTGRES);
     config = Object.assign(config, { user: config.username });
-    const nativeClient = await new postgres.Pool(config, config.poolSize ?? 1).connect();
+    const nativeClient = await new postgres.Pool(config, config.poolSize ?? 1).connect() as Postgres;
     return new class implements Client {
       type = config.type;
       close() {
-        return Promise.resolve();
+        return nativeClient.end();
       }
       async execute(sql: string, parameters?: Parameter[]) {
         const qar = await nativeClient.queryArray(sql, parameters);
@@ -131,22 +116,19 @@ async function connect(config: ClientConfig): Promise<Client> {
 
   // Sqlite
   if (config.type === Provider.SQLITE) {
-    const sqlite = await import("https://deno.land/x/sqlite@v3.9.1/mod.ts");
-    const nativeClient = new sqlite.DB(config.database ?? Deno.env.get("DB_FILE") ?? ":memory:");
+    const sqlite = await import(Drivers.SQLITE);
+    const nativeClient = new sqlite.Database(config.database ?? Deno.env.get("DB_FILE") ?? ":memory:") as SQLite;
     return new class implements Client {
       type = config.type;
       close() {
-        nativeClient.close();
-        return Promise.resolve();
+        return Promise.resolve(nativeClient.close());
       }
       execute(sql: string, parameters?: Parameter[]) {
-        // deno-lint-ignore no-explicit-any
-        nativeClient.query(sql, parameters as any);
+        nativeClient.exec(sql, parameters);
         return Promise.resolve({ affectedRows: nativeClient.changes, lastInsertId: nativeClient.lastInsertRowId });
       }
       query(sql: string, parameters?: Parameter[]) {
-        // deno-lint-ignore no-explicit-any
-        return Promise.resolve(nativeClient.queryEntries(sql, parameters as any));
+        return Promise.resolve(nativeClient.prepare(sql).all(parameters));
       }
     }();
   }

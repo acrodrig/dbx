@@ -288,7 +288,6 @@ export class Repository<T extends Identifiable> extends EventTarget {
         const wrapper = (columns: string[], s = ",", w = false) => columns.map((c) => w ? "COALESCE(" + c + ",'')" : c).join(s);
         if (fullTextColumns?.length) {
           if (DB.type === DB.Provider.MYSQL) expressions.push("MATCH (" + wrapper(fullTextColumns) + ") AGAINST (? IN BOOLEAN MODE)");
-          if (DB.type === DB.Provider.MYSQL2) expressions.push("MATCH (" + wrapper(fullTextColumns) + ") AGAINST (? IN BOOLEAN MODE)");
           if (DB.type === DB.Provider.POSTGRES) expressions.push("TO_TSVECTOR('english', " + wrapper(fullTextColumns) + ") @@ TO_TSQUERY(?)");
         } else expressions.push(column + " LIKE ?");
       } else if (column === "$sql") {
@@ -309,7 +308,6 @@ export class Repository<T extends Identifiable> extends EventTarget {
         // See this SQ for Postgres operators: https://stackoverflow.com/a/38374876/2772798
         if (key === "contains") {
           if (DB.type === DB.Provider.MYSQL) expressions.push("? " + op + " (" + column + ")");
-          if (DB.type === DB.Provider.MYSQL2) expressions.push("? " + op + " (" + column + ")");
           if (DB.type === DB.Provider.POSTGRES) expressions.push("JSONB_EXISTS(CAST(" + column + " AS JSONB), ?)");
           if (DB.type === DB.Provider.SQLITE) expressions.push(column + " LIKE ?");
         } else expressions.push(column + " " + op + (explode ? " (" + join("?", value[key].length) + ")" : " ?"));

@@ -67,7 +67,7 @@ CREATE INDEX accounts_valueList ON accounts (id,(CAST(valueList AS CHAR(32) ARRA
 CREATE FULLTEXT INDEX accounts_fulltext ON accounts (comments,country,phone,name);
 `.trim();
 
-Deno.test("Table Creation MySQL/MySQL2", function () {
+Deno.test("Table Creation MySQL", function () {
   const ddl = DDL.createTable(AccountSchema as Schema, "mysql", "accounts");
   if (DEBUG) console.log(`\nMYSQL\n${HR}\n${ddl}\n\n`);
   assertEquals(ddl.trim(), MYSQL);
@@ -123,6 +123,9 @@ Deno.test("Actual Table", async function () {
   // Select table from Information Schema
   const noTable = await DB.query(sql);
   assertEquals(noTable.length, 0);
+});
 
+// Execute the table creation on the provided platform
+Deno.test("Disconnect", { sanitizeResources: false, sanitizeOps: false }, async function () {
   await DB.disconnect();
 });

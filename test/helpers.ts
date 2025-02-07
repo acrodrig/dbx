@@ -4,7 +4,7 @@ import { DDL } from "../src/ddl.ts";
 import type { Schema } from "../src/types.ts";
 
 const PROVIDER = Deno.env.get("TEST_PROVIDER") ?? Deno.args[0];
-if (!PROVIDER) console.warn("\n⚠️  Assuming SQLITE provider. You can use 'TEST_PROVIDER=<provider>' or '-- <provider>' (mysql, mysql2, postgres, sqlite)\n");
+if (!PROVIDER) console.warn("\n⚠️  Assuming SQLITE provider. You can use 'TEST_PROVIDER=<provider>' or '-- <provider>' (mysql, postgres, sqlite)\n");
 
 setup({
   handlers: { console: new ConsoleHandler("DEBUG") },
@@ -23,7 +23,7 @@ export async function dbInit(type: string, schemas?: Schema[]) {
     if (schemas) await createTables(schemas);
   } catch (ex) {
     console.error("\n❌ Could not connect to DB '" + type + "' using 'dbx@" + hostname + "' or could not execute SQL!\n");
-    console.error("MESSAGE: " + (ex as Error).message + "");
+    console.error("MESSAGE: " + (ex as Error).message + "", ex);
     console.error("\nMake sure the user is created in the database (with NO password) and the DB is up\n");
     Deno.exit(1);
   }

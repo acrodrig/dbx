@@ -13,7 +13,6 @@ const dataTypes = {
 const serialType = {
   sqlite: " AUTOINCREMENT",
   mysql: " AUTO_INCREMENT",
-  mysql2: " AUTO_INCREMENT",
   postgres: "",
 };
 
@@ -55,7 +54,7 @@ export class DDL {
   static createColumn(dbType: string, name: string, column: Column, namePad: number, padWidth = DDL.padWidth, defaultWidth = DDL.defaultWidth): string {
     if (typeof (column.default) === "object") column.default = "('" + JSON.stringify(column.default) + "')";
     if (column.dateOn === "insert") column.default = "CURRENT_TIMESTAMP";
-    if (column.dateOn === "update") column.default = "CURRENT_TIMESTAMP" + ((dbType !== DB.Provider.MYSQL && dbType !== DB.Provider.MYSQL2) ? "" : " ON UPDATE CURRENT_TIMESTAMP");
+    if (column.dateOn === "update") column.default = "CURRENT_TIMESTAMP" + ((dbType !== DB.Provider.MYSQL) ? "" : " ON UPDATE CURRENT_TIMESTAMP");
     const pad = "".padEnd(padWidth);
     let type = dataTypes[column.type as keyof typeof dataTypes];
     const autoIncrement = column.primaryKey && column.type === "integer";
@@ -66,7 +65,7 @@ export class DDL {
     const as = asExpression ? " GENERATED ALWAYS AS (" + asExpression + ") " + (column.generatedType?.toUpperCase() || "VIRTUAL") : "";
     const def = Object.hasOwn(column, "default") ? " DEFAULT " + column.default : "";
     const key = column.primaryKey ? " PRIMARY KEY" : (column.unique ? " UNIQUE" : "");
-    const comment = (dbType === DB.Provider.MYSQL || dbType === DB.Provider.MYSQL2) && column.comment ? " COMMENT '" + column.comment.replace(/'/g, "''") + "'" : "";
+    const comment = (dbType === DB.Provider.MYSQL) && column.comment ? " COMMENT '" + column.comment.replace(/'/g, "''") + "'" : "";
 
     // Correct Postgres JSON type
     if (dbType === DB.Provider.POSTGRES && type === "JSON") type = "JSONB";
@@ -84,7 +83,7 @@ export class DDL {
     // TODO: multivalued indexes only supported on MYSQL for now, Postgres and SQLite will use the entire
     const subType = indice.subType ?? "CHAR(32)";
     if (indice.array !== undefined) {
-      columns[indice.array] = "(CAST(" + columns[indice.array] + " AS " + subType + (dbType === DB.Provider.MYSQL || dbType === DB.Provider.MYSQL2 ? " ARRAY" : "") + "))";
+      columns[indice.array] = "(CAST(" + columns[indice.array] + " AS " + subType + (dbType === DB.Provider.MYSQL ? " ARRAY" : "") + "))";
     }
 
     const name = indice.name ?? "";
@@ -97,7 +96,6 @@ export class DDL {
 
     const wrapper = (columns: string[], s = ",", w = false) => columns.map((c) => w ? "COALESCE(" + c + ",'')" : c).join(s);
     if (dbType === DB.Provider.MYSQL) return `${pad}CREATE FULLTEXT INDEX ${table}_${name} ON ${table} (${wrapper(columns, ",")});\n`;
-    if (dbType === DB.Provider.MYSQL2) return `${pad}CREATE FULLTEXT INDEX ${table}_${name} ON ${table} (${wrapper(columns, ",")});\n`;
     if (dbType === DB.Provider.POSTGRES) return `${pad}CREATE INDEX ${table}_${name} ON ${table} USING GIN (TO_TSVECTOR('english', ${wrapper(columns, "||' '||", true)}));`;
 
     return "";

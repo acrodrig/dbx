@@ -29,3 +29,6 @@ jobs:
 
       # Check that code is correctly formatted
       - run: deno fmt --check
+
+      # Publish to JSR
+      - run: deno publish
