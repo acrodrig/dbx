@@ -5,8 +5,8 @@ import type { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
 
 // Import Driver Types
-import type { Database as SQLite } from "jsr:@db/sqlite";
-import type { Client as Postgres } from "jsr:@dewars/postgres";
+import type { Database as SQLite } from "jsr:@db/sqlite@0";
+import type { Client as Postgres } from "jsr:@dewars/postgres@0";
 
 const TTY = Deno.stderr.isTerminal();
 
@@ -33,12 +33,6 @@ const Provider = {
   SQLITE: "sqlite",
 } as const;
 type Provider = Values<typeof Provider>;
-
-const Drivers = {
-  MYSQL: "npm:mysql2@^3/promise",
-  POSTGRES: "jsr:@dewars/postgres@0",
-  SQLITE: "jsr:@db/sqlite@0",
-} as const;
 
 export interface Client {
   type: string;
@@ -68,7 +62,7 @@ async function connect(config: ClientConfig): Promise<Client> {
 
   // MySQL
   if (config.type === Provider.MYSQL) {
-    const mysql = await import(Drivers.MYSQL);
+    const mysql = await import("npm:mysql2@^3/promise");
     const nativeClient = await mysql.createConnection({
       host: config.hostname ?? "127.0.0.1",
       database: config.database,
@@ -79,15 +73,17 @@ async function connect(config: ClientConfig): Promise<Client> {
     return new class implements Client {
       type = config.type;
       close() {
-        return nativeClient.close();
+        return nativeClient.end();
       }
       async execute(sql: string, parameters?: Parameter[]) {
-        const [rsh] = await nativeClient.execute(sql, parameters);
+        // deno-lint-ignore no-explicit-any
+        const [rsh] = await (nativeClient as any).execute(sql, parameters);
         // deno-lint-ignore no-explicit-any
         return { affectedRows: (rsh as any).affectedRows, lastInsertId: (rsh as any).insertId };
       }
       async query(sql: string, parameters?: Parameter[]) {
-        const [rows] = await nativeClient.query(sql, parameters);
+        // deno-lint-ignore no-explicit-any
+        const [rows] = await (nativeClient as any).query(sql, parameters);
         return rows as Row[];
       }
     }();
@@ -95,7 +91,7 @@ async function connect(config: ClientConfig): Promise<Client> {
 
   // Postgres
   if (config.type === Provider.POSTGRES) {
-    const postgres = await import(Drivers.POSTGRES);
+    const postgres = await import("jsr:@dewars/postgres@0");
     config = Object.assign(config, { user: config.username });
     const nativeClient = await new postgres.Pool(config, config.poolSize ?? 1).connect() as Postgres;
     return new class implements Client {
@@ -116,7 +112,7 @@ async function connect(config: ClientConfig): Promise<Client> {
 
   // Sqlite
   if (config.type === Provider.SQLITE) {
-    const sqlite = await import(Drivers.SQLITE);
+    const sqlite = await import("jsr:@db/sqlite@0");
     const nativeClient = new sqlite.Database(config.database ?? Deno.env.get("DB_FILE") ?? ":memory:") as SQLite;
     return new class implements Client {
       type = config.type;
