@@ -72,7 +72,7 @@ assert(users.length === 1); // User was found
 ### Using with an (extended) JSON schema
 
 DBX extends JSON Schema (along [these](https://json-schema.org/understanding-json-schema/structuring.html#id21) lines) to 
-provide a way to define the database schema (see specific extensions in the `types.ts` file). With a schema in hand (such as account.json) we
+provide a way to define the database schema (see specific extensions in the [`types.ts`](./src/types.ts) file). With a schema in hand (such as account.json) we
 can generate the DDL to create the tables, and use the schema to validate the data.
 
 An example schema:

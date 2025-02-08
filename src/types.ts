@@ -8,8 +8,8 @@ export type Identifiable = { id?: number | string };
 
 // JSON Schema Property
 export interface Property {
-  comment?: string;
   default?: unknown;
+  description?: string;
   format?: string;
   fullText?: boolean;
   maxLength?: number;
@@ -27,7 +27,6 @@ export interface Property {
 // JSON Schema Extensions Properties
 export interface Column extends Property {
   asExpression?: string | { [key: string]: string };
-  comment?: string;
   dateOn?: "delete" | "insert" | "update";
   generatedType?: string | "virtual" | "stored";
   primaryKey?: boolean;
@@ -35,7 +34,7 @@ export interface Column extends Property {
 
 export interface Index {
   array?: number;
-  comment?: string;
+  description?: string;
   properties: string[];
   name?: string;
   subType?: string;

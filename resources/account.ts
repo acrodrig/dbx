@@ -1,5 +1,8 @@
 export default class Account {
-    id!: number;
+  /**
+   * Internal auto-incremented ID
+   */
+  id!: number;
     comments?: string;
     country = "US";
     email?: string;

@@ -14,8 +14,7 @@
     "@std/assert": "jsr:@std/assert@^1",
     "@std/collections": "jsr:@std/collections@^1",
     "@std/fmt": "jsr:@std/fmt@^1",
-    "@std/log": "jsr:@std/log@^0",
-    "schema": "npm:@types/json-schema/7.0.15"
+    "@std/log": "jsr:@std/log@^0"
   },
   "lock": false,
   "tasks": {

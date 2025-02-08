@@ -19,10 +19,10 @@ const serialType = {
 const _BaseSchema: DB.Schema = {
   name: "_BaseSchema",
   properties: {
-    id: { type: "integer", required: true, primaryKey: true, comment: "Unique identifier, auto-generated. It's the primary key." },
-    insertedAt: { type: "date", required: false, dateOn: "insert", comment: "Timestamp when current record is inserted" },
-    updatedAt: { type: "date", required: false, dateOn: "update", comment: "Timestamp when current record is updated" },
-    etag: { type: "string", required: false, maxLength: 1024, comment: "Possible ETag for all resources that are external. Allows for better synch-ing." },
+    id: { type: "integer", required: true, primaryKey: true, description: "Unique identifier, auto-generated. It's the primary key." },
+    insertedAt: { type: "date", required: false, dateOn: "insert", description: "Timestamp when current record is inserted" },
+    updatedAt: { type: "date", required: false, dateOn: "update", description: "Timestamp when current record is updated" },
+    etag: { type: "string", required: false, maxLength: 1024, description: "Possible ETag for all resources that are external. Allows for better synch-ing." },
   },
   indices: [
     { name: "insertedAt", properties: ["insertedAt"] },
@@ -65,7 +65,7 @@ export class DDL {
     const as = asExpression ? " GENERATED ALWAYS AS (" + asExpression + ") " + (column.generatedType?.toUpperCase() || "VIRTUAL") : "";
     const def = Object.hasOwn(column, "default") ? " DEFAULT " + column.default : "";
     const key = column.primaryKey ? " PRIMARY KEY" : (column.unique ? " UNIQUE" : "");
-    const comment = (dbType === DB.Provider.MYSQL) && column.comment ? " COMMENT '" + column.comment.replace(/'/g, "''") + "'" : "";
+    const comment = (dbType === DB.Provider.MYSQL) && column.description ? " COMMENT '" + column.description.replace(/'/g, "''") + "'" : "";
 
     // Correct Postgres JSON type
     if (dbType === DB.Provider.POSTGRES && type === "JSON") type = "JSONB";
