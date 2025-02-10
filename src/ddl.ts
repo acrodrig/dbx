@@ -77,7 +77,6 @@ export class DDL {
   }
 
   static #defaultValue(column: Column, dbType: string) {
-    console.log(column);
     if (column.dateOn === "insert") return "CURRENT_TIMESTAMP";
     if (column.dateOn === "update") return "CURRENT_TIMESTAMP" + ((dbType !== DB.Provider.MYSQL) ? "" : " ON UPDATE CURRENT_TIMESTAMP");
     if (typeof (column.default) === "string" && !column.default.startsWith("'") && !column.default.endsWith("'")) return "'" + column.default + "'";
@@ -97,7 +96,7 @@ export class DDL {
     const gen = autoIncrement ? serialType[dbType as keyof typeof serialType] : "";
     const expr = column.as && (typeof column.as === "string" ? DB._sqlFilter(column.as) : column.as[dbType]);
     const as = expr ? " GENERATED ALWAYS AS (" + expr + ") STORED" : "";
-    const def = Object.hasOwn(column, "default")|| Object.hasOwn(column, "dateOn") ? " DEFAULT " + this.#defaultValue(column, dbType) : "";
+    const def = Object.hasOwn(column, "default") || Object.hasOwn(column, "dateOn") ? " DEFAULT " + this.#defaultValue(column, dbType) : "";
     const key = primaryKey ? " PRIMARY KEY" : (column.uniqueItems !== undefined ? " UNIQUE" : "");
     const comment = (dbType === DB.Provider.MYSQL) && column.description ? " COMMENT '" + column.description.replace(/'/g, "''") + "'" : "";
 
