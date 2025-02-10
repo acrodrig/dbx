@@ -21,7 +21,7 @@
     "check": "deno check **/*.ts && deno lint && deno fmt --check",
     "lint": "deno lint src test",
     "release": "release",
-    "test": "deno test -A",
+    "test": "deno test -A --unstable-kv",
     "test-mysql": "./test/test-mysql.sh",
     "test-postgres": "./test/test-postgres.sh"
   }

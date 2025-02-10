@@ -135,7 +135,6 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const limit = filter.limit ?? 100;
 
     // This is the only method where full text search is permitted (it could be disastrous in DELETE for example)
-    const properties = this.schema?.properties ?? {};
     if (DB.type === DB.Provider.SQLITE && this.schema?.fullText) this.schema.fullText.length = 0;
 
     // Build SQL (if there is a select, clean it to prevent SQL injection)

@@ -75,9 +75,12 @@ Deno.test("list", async function () {
 });
 
 Deno.test("update", async function () {
+  // deno-lint-ignore no-explicit-any
   await repo.updateById(8, { author: "me", foo: "bar" } as any);
   assertObjectMatch(await repo.findById(8) as Post, { author: "me", foo: "bar" });
+  // deno-lint-ignore no-explicit-any
   await repo.updateById(8, { author: "Lisa Nguyen", foo: undefined } as any);
   assertObjectMatch(await repo.findById(8) as Post, { author: "Lisa Nguyen" });
+  // deno-lint-ignore no-explicit-any
   assertFalse((await repo.findById(8) as any).foo);
 });

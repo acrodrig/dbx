@@ -5,7 +5,6 @@ const META = false;
 const kv = await Deno.openKv();
 
 export class KV<T extends Identifiable> extends Repository<T> {
-
   constructor(type: Class<T>, private keys: string[], schema?: Schema, name?: string) {
     super(type, schema, name);
   }
@@ -48,6 +47,7 @@ export class KV<T extends Identifiable> extends Repository<T> {
 
   async #update(key: Deno.KvKey = [], object: Partial<T>): Promise<T | undefined> {
     const entry = await kv.get<T>(key);
+    // deno-lint-ignore no-explicit-any
     const insertedAt = (entry.value as any)?.insertedAt ?? new Date();
     if (META) object = Object.assign(object, { insertedAt, updatedAt: new Date() });
     await kv.set(key, Object.assign(entry.value ?? {}, object));
@@ -112,6 +112,7 @@ export class KV<T extends Identifiable> extends Repository<T> {
 
   // https://docs.deno.com/kv/manual/operations#set
   override async insert(object: T, debug?: boolean, check = true): Promise<T> {
+    // deno-lint-ignore no-explicit-any
     const key = [this.type.name, ...this.keys.map((k) => (object as any)[k] as string)];
     if (check) {
       const entry = await kv.get(key);
@@ -126,6 +127,7 @@ export class KV<T extends Identifiable> extends Repository<T> {
 
   // https://docs.deno.com/kv/manual/operations#set
   override update(object: Partial<T>, debug?: boolean): Promise<T | undefined> {
+    // deno-lint-ignore no-explicit-any
     const key = [this.type.name, ...this.keys.map((k) => (object as any)[k] as string)];
     if (debug) console.debug({ method: "update", key, object });
     return this.#update(key, object);

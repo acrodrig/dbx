@@ -36,7 +36,7 @@ export class DDL {
 
   static padWidth = 4;
   static defaultWidth = 128;
-  static textWidth = 128;
+  static textWidth = 2048;
 
   /**
    * When using tools such as [TJS](https://github.com/YousefED/typescript-json-schema) to
@@ -45,18 +45,19 @@ export class DDL {
    *
    * @param schema - the tool-generated schema
    * @param type - the type of the schema which we may need to correct/override
+   * @param table - the table name which we may need to correct/override
    */
-  static cleanSchema(schema: Schema, type?: string, table?: string) {
+  static cleanSchema(schema: Schema, type?: string, table?: string): Schema {
     if (type) schema.type = type;
     if (table) schema.table = table;
-    if (typeof(schema.fullText) === "string") schema.fullText = (schema.fullText as string).split(",").map(s => s.trim());
+    if (typeof (schema.fullText) === "string") schema.fullText = (schema.fullText as string).split(",").map((s) => s.trim());
     schema.indices ??= [];
     Object.values(schema.properties).forEach((c) => {
       if (!c.type) c.type = "string";
       if (typeof c.primaryKey === "string") c.primaryKey = true;
       if (typeof c.uniqueItems === "string") c.uniqueItems = true;
       if (c.format === "date-time") c.type = "date";
-      if (typeof c.index === "string") schema.indices!.push({ properties: (c.index as string).split(",").map(s => s.trim()) });
+      if (typeof c.index === "string") schema.indices!.push({ properties: (c.index as string).split(",").map((s) => s.trim()) });
     });
     return schema;
   }
@@ -75,23 +76,28 @@ export class DDL {
     return schema;
   }
 
+  static #defaultValue(column: Column, dbType: string) {
+    console.log(column);
+    if (column.dateOn === "insert") return "CURRENT_TIMESTAMP";
+    if (column.dateOn === "update") return "CURRENT_TIMESTAMP" + ((dbType !== DB.Provider.MYSQL) ? "" : " ON UPDATE CURRENT_TIMESTAMP");
+    if (typeof (column.default) === "string" && !column.default.startsWith("'") && !column.default.endsWith("'")) return "'" + column.default + "'";
+    if (typeof (column.default) === "object") return "('" + JSON.stringify(column.default) + "')";
+    return column.default;
+  }
+
   // Column generator
   static createColumn(dbType: string, name: string, column: Column, required: boolean, namePad: number, padWidth = DDL.padWidth, defaultWidth = DDL.defaultWidth): string {
-    if (typeof (column.default) === "string" && !column.default.startsWith("'") && !column.default.endsWith("'")) column.default = "'" + column.default + "'";
-    if (typeof (column.default) === "object") column.default = "('" + JSON.stringify(column.default) + "')";
-    if (column.dateOn === "insert") column.default = "CURRENT_TIMESTAMP";
-    if (column.dateOn === "update") column.default = "CURRENT_TIMESTAMP" + ((dbType !== DB.Provider.MYSQL) ? "" : " ON UPDATE CURRENT_TIMESTAMP");
     const pad = "".padEnd(padWidth);
     let type = dataTypes[column.type as keyof typeof dataTypes];
-    if (column.maxLength! > this.textWidth) type = "TEXT";
-    const primaryKey = (column.primaryKey !== undefined);
+    if (dbType === DB.Provider.MYSQL && column.maxLength! > this.textWidth) type = "TEXT";
+    const primaryKey = column.primaryKey !== undefined;
     const autoIncrement = primaryKey && column.type === "integer";
     const length = column.maxLength! < this.textWidth || type.endsWith("CHAR") ? "(" + (column.maxLength ?? defaultWidth) + ")" : "";
     const nullable = primaryKey || required ? " NOT NULL" : "";
     const gen = autoIncrement ? serialType[dbType as keyof typeof serialType] : "";
     const expr = column.as && (typeof column.as === "string" ? DB._sqlFilter(column.as) : column.as[dbType]);
     const as = expr ? " GENERATED ALWAYS AS (" + expr + ") STORED" : "";
-    const def = Object.hasOwn(column, "default") ? " DEFAULT " + column.default : "";
+    const def = Object.hasOwn(column, "default")|| Object.hasOwn(column, "dateOn") ? " DEFAULT " + this.#defaultValue(column, dbType) : "";
     const key = primaryKey ? " PRIMARY KEY" : (column.uniqueItems !== undefined ? " UNIQUE" : "");
     const comment = (dbType === DB.Provider.MYSQL) && column.description ? " COMMENT '" + column.description.replace(/'/g, "''") + "'" : "";
 
