@@ -162,7 +162,7 @@ export class DB {
   static async connect(config: ClientConfig, schemas?: Schema[]): Promise<Client> {
     // Iterate over the schemas and map them by name and type if it exists
     schemas?.forEach((s) => {
-      DB.#schemas.set(s.name, s);
+      DB.#schemas.set(s.table!, s);
       if (s.type) DB.#schemas.set(s.type, s);
     });
     if (DB.client) return Promise.resolve(DB.client);
@@ -270,7 +270,7 @@ export class DB {
     const name = typeof target === "string" ? target : target.name;
     if (typeof target === "string") target = Object as unknown as Class<T>;
     if (!schema) schema = DB.#schemas.get(name);
-    repository = new Repository(target, schema, schema?.name ?? name);
+    repository = new Repository(target, schema, schema?.table ?? name);
     this.#repositories.set(target, repository as Repository<Identifiable>);
 
     // Return repository

@@ -7,40 +7,41 @@ export type Row = { [key in string]?: unknown };
 export type Identifiable = { id?: number | string };
 
 // JSON Schema Property
+// See https://json-schema.org/understanding-json-schema/keywords#items
 export interface Property {
   default?: unknown;
   description?: string;
   format?: string;
-  fullText?: boolean;
   maxLength?: number;
   maximum?: number | string;
   minLength?: number;
   minimum?: number | string;
   pattern?: string;
-  required?: boolean;
   readOnly?: boolean;
-  unique?: boolean;
-  type: "boolean" | "date" | "integer" | "number" | "json" | "string";
+  uniqueItems?: boolean;
+  type: "boolean" | "date" | "integer" | "number" | "object" | "string";
   writeOnly?: boolean;
 }
 
 // JSON Schema Extensions Properties
 export interface Column extends Property {
-  asExpression?: string | { [key: string]: string };
+  as?: string | { [key: string]: string };
   dateOn?: "delete" | "insert" | "update";
-  generatedType?: string | "virtual" | "stored";
+  index?: boolean;
   primaryKey?: boolean;
 }
 
+// Extra properties such as `array`, 'subType' and 'unique can only be defined externally
+// (i.e. not through the TS file)
 export interface Index {
   array?: number;
   description?: string;
   properties: string[];
-  name?: string;
   subType?: string;
   unique?: boolean;
 }
 
+// Relations can only be described externally
 export interface Relation {
   join: string;
   delete?: "cascade" | "no-action" | "restrict" | "set-default" | "set-null";
@@ -52,12 +53,14 @@ export interface Relation {
 export type Constraint = { name?: string; check: string; enforced?: boolean; comment?: string; provider?: string };
 
 export interface Schema {
-  // Name of relation, normally the table name
-  name: string;
+  // Name of relation, normally the table name (if it does not exist the class name will be used)
+  table?: string;
   // Type of the object, which should correspond to the entity name (i.e. class)
   type?: string;
   // Map of properties
   properties: { [key: string]: Column };
+  required?: string[];
+  fullText?: string[];
   indices?: Index[];
   relations?: { [key: string]: Relation };
   constraints?: Constraint[];

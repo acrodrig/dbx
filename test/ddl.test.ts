@@ -18,21 +18,21 @@ CREATE TABLE IF NOT EXISTS accounts (
     id          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     inserted    DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated     DATETIME DEFAULT CURRENT_TIMESTAMP,
-    etag        VARCHAR(1024),
+    etag        VARCHAR(256),
     comments    VARCHAR(8192),
-    country     VARCHAR(16) NOT NULL DEFAULT 'US',
-    email       VARCHAR(128) UNIQUE,
+    country     VARCHAR(256) NOT NULL DEFAULT 'US',
+    email       VARCHAR(256) UNIQUE,
     established DATETIME(6),
     enabled     BOOLEAN NOT NULL DEFAULT true,
     externalId  VARCHAR(512) UNIQUE,
-    phone       VARCHAR(128),
+    phone       VARCHAR(256),
     name        VARCHAR(256) NOT NULL UNIQUE,
     preferences JSON NOT NULL DEFAULT ('{"wrap":true,"minAge":18}'),
     valueList   JSON GENERATED ALWAYS AS (JSON_EXTRACT(preferences, '$.*')) STORED
 );
 CREATE INDEX accounts_inserted ON accounts (inserted);
 CREATE INDEX accounts_updated ON accounts (updated);
-CREATE INDEX accounts_valueList ON accounts (id,(CAST(valueList AS CHAR(32))),enabled);
+CREATE INDEX accounts_id_valueList_enabled ON accounts (id,(CAST(valueList AS CHAR(32))),enabled);
 `.trim();
 
 Deno.test("Table Creation SQLite", function () {
@@ -46,24 +46,24 @@ CREATE TABLE IF NOT EXISTS accounts (
     id          INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Unique identifier, auto-generated. It''s the primary key.',
     inserted    DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp when current record is inserted',
     updated     DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Timestamp when current record is updated',
-    etag        VARCHAR(1024) COMMENT 'Possible ETag for all resources that are external. Allows for better synch-ing.',
+    etag        VARCHAR(256) COMMENT 'Possible ETag for all resources that are external. Allows for better synch-ing.',
     comments    VARCHAR(8192) COMMENT 'General comments. Can be used for anything useful related to the instance.',
-    country     VARCHAR(16) NOT NULL DEFAULT 'US' COMMENT 'Country code',
-    email       VARCHAR(128) UNIQUE COMMENT 'Main email to communicate for that account',
+    country     VARCHAR(256) NOT NULL DEFAULT 'US' COMMENT 'Country code',
+    email       VARCHAR(256) UNIQUE COMMENT 'Main email to communicate for that account',
     established DATETIME(6) COMMENT 'Date on which the account was established',
     enabled     BOOLEAN NOT NULL DEFAULT true COMMENT 'Whether it is enabled or not. Disabled instances will not be used.',
     externalId  VARCHAR(512) UNIQUE COMMENT 'External unique ID, used to refer to external accounts',
-    phone       VARCHAR(128) COMMENT 'Handle associated with the account',
+    phone       VARCHAR(256) COMMENT 'Handle associated with the account',
     name        VARCHAR(256) NOT NULL UNIQUE COMMENT 'Descriptive name to identify the instance',
     preferences JSON NOT NULL DEFAULT ('{"wrap":true,"minAge":18}') COMMENT 'All the general options associated with the account.',
-    valueList   JSON GENERATED ALWAYS AS (JSON_EXTRACT(preferences, '$.*')) STORED,
+    valueList   JSON GENERATED ALWAYS AS (JSON_EXTRACT(preferences, '$.*')) STORED COMMENT 'Auto-generated field with values',
     CONSTRAINT accounts_established CHECK (established >= '2020-01-01'),
     CONSTRAINT accounts_email CHECK (email IS NULL OR email RLIKE '^[^@]+@[^@]+[.][^@]{2,}$'),
     CONSTRAINT accounts_phone CHECK (phone IS NULL OR phone RLIKE '^[0-9]{8,16}$')
 );
 CREATE INDEX accounts_inserted ON accounts (inserted);
 CREATE INDEX accounts_updated ON accounts (updated);
-CREATE INDEX accounts_valueList ON accounts (id,(CAST(valueList AS CHAR(32) ARRAY)),enabled);
+CREATE INDEX accounts_id_valueList_enabled ON accounts (id,(CAST(valueList AS CHAR(32) ARRAY)),enabled);
 CREATE FULLTEXT INDEX accounts_fulltext ON accounts (comments,country,phone,name);
 `.trim();
 
@@ -78,14 +78,14 @@ CREATE TABLE IF NOT EXISTS accounts (
     id          SERIAL NOT NULL PRIMARY KEY,
     inserted    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    etag        VARCHAR(1024),
+    etag        VARCHAR(256),
     comments    VARCHAR(8192),
-    country     VARCHAR(16) NOT NULL DEFAULT 'US',
-    email       VARCHAR(128) UNIQUE,
+    country     VARCHAR(256) NOT NULL DEFAULT 'US',
+    email       VARCHAR(256) UNIQUE,
     established TIMESTAMP(6),
     enabled     BOOLEAN NOT NULL DEFAULT true,
     externalId  VARCHAR(512) UNIQUE,
-    phone       VARCHAR(128),
+    phone       VARCHAR(256),
     name        VARCHAR(256) NOT NULL UNIQUE,
     preferences JSONB NOT NULL DEFAULT ('{"wrap":true,"minAge":18}'),
     valueList   JSONB GENERATED ALWAYS AS (JSONB_EXTRACT_PATH(preferences, '$.*')) STORED,
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 );
 CREATE INDEX accounts_inserted ON accounts (inserted);
 CREATE INDEX accounts_updated ON accounts (updated);
-CREATE INDEX accounts_valueList ON accounts (id,(CAST(valueList AS CHAR(32))),enabled);
+CREATE INDEX accounts_id_valueList_enabled ON accounts (id,(CAST(valueList AS CHAR(32))),enabled);
 CREATE INDEX accounts_fulltext ON accounts USING GIN (TO_TSVECTOR('english', COALESCE(comments,'')||' '||COALESCE(country,'')||' '||COALESCE(phone,'')||' '||COALESCE(name,'')));
 `.trim();
 

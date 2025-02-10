@@ -21,7 +21,7 @@ test("Basic entity store/retrieve", options, async function () {
   let account = new AccountModel({ name: NAME });
 
   // Make sure the account established date has milliseconds
-  account.established.setMilliseconds(123);
+  account.established!.setMilliseconds(123);
 
   // Save
   account = await repo.insert(account);
@@ -61,7 +61,7 @@ test("Boolean Values", options, async function () {
 
 test("DateTime Values", options, async function () {
   const account = await repo.findOne({});
-  assertEquals(account!.established.getMilliseconds(), 123);
+  assertEquals(account!.established!.getMilliseconds(), 123);
 });
 
 test("Full Text search", options, async function () {

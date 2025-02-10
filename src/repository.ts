@@ -50,7 +50,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     super();
     this.type = type;
     this.schema = schema;
-    this.table = name ?? schema?.name ?? type.name;
+    this.table = name ?? schema?.table ?? type.name;
   }
 
   setBaseWhere(bc: Condition<T>): this {
@@ -136,12 +136,11 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
     // This is the only method where full text search is permitted (it could be disastrous in DELETE for example)
     const properties = this.schema?.properties ?? {};
-    const fullTextColumns = Object.entries(properties).filter(([_, p]) => p.fullText).map(([n, _]) => n);
-    if (DB.type === DB.Provider.SQLITE) fullTextColumns.length = 0;
+    if (DB.type === DB.Provider.SQLITE && this.schema?.fullText) this.schema.fullText.length = 0;
 
     // Build SQL (if there is a select, clean it to prevent SQL injection)
     const _select = select.length ? select.map((c) => c.replace(/[^a-zA-Z0-9_]/g, "")).join(",") : "*";
-    const _where = Repository._where({ ...where, ...this.baseWhere }, whereTree, fullTextColumns);
+    const _where = Repository._where({ ...where, ...this.baseWhere }, whereTree, this.schema?.fullText ?? []);
     const _order = Repository._order(filter.order) || "NULL";
     const parameters = [...whereTree, limit, offset];
     const sql = `SELECT ${_select} FROM ${this.table} WHERE ${_where} ORDER BY ${_order} LIMIT ? OFFSET ?`;
@@ -222,14 +221,14 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const names = Object.keys(columns ?? object);
     names.forEach((n) => {
       const column = columns?.[n];
-      if (column && (column.readOnly || column.asExpression || column.dateOn)) return;
+      if (column && (column.readOnly || column.as || column.dateOn)) return;
       const type = column?.type;
       const value = object[n as keyof typeof object];
       if (typeof value === "undefined") return;
       else if (value === null) record[n] = null;
       else if (type === "boolean") record[n] = !!value;
       else if (type === "date" && (value as unknown) instanceof Date) record[n] = value;
-      else if (type === "json") record[n] = JSON.stringify(value);
+      else if (type === "object") record[n] = JSON.stringify(value);
       // deno-lint-ignore ban-types
       else if ((value as Object).constructor === Object) record[n] = JSON.stringify(value);
       else record[n] = value;
@@ -247,7 +246,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
       else if (value === null) object[n] = null;
       else if (type === "boolean") object[n] = !!value;
       else if (type === "date") object[n] = new Date(value as string);
-      else if (type === "json") object[n] = typeof value === "string" ? JSON.parse(value) : value;
+      else if (type === "object") object[n] = typeof value === "string" ? JSON.parse(value) : value;
       else if (typeof value === "string" && value.startsWith("{") && value.endsWith("}")) object[n] = JSON.parse(value as string);
       else object[n] = value;
     });
