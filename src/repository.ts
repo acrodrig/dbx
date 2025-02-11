@@ -119,9 +119,10 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
   // Follow Loopback model (see https://loopback.io/doc/en/lb4/Querying-data.html)
-  async find(filter: Filter<T> = {}, debug?: boolean): Promise<T[]> {
+  async find(filterOrWhere?: Filter<T> | Where<T>, debug?: boolean): Promise<T[]> {
     // If there is no filter, we are better off returning the results from all
-    if (!filter) return this.all();
+    if (!filterOrWhere) return this.all();
+    const filter: Filter<T> = Object.hasOwn(filterOrWhere, "where") ? filterOrWhere as Filter<T> : { where: filterOrWhere as Where<T> };
 
     assert(typeof filter === "object" && !Array.isArray(filter), "Parameter 'filter' must be an object");
 
@@ -166,7 +167,8 @@ export class Repository<T extends Identifiable> extends EventTarget {
   }
 
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
-  async findOne(filter: Filter<T> = {}, debug?: boolean): Promise<T | undefined> {
+  async findOne(filterOrWhere: Filter<T> | Where<T> = {}, debug?: boolean): Promise<T | undefined> {
+    const filter: Filter<T> = Object.hasOwn(filterOrWhere, "where") ? filterOrWhere as Filter<T> : { where: filterOrWhere as Where<T> };
     filter.limit = 1;
     return (await this.find(filter, debug)).pop();
   }

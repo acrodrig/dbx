@@ -42,6 +42,11 @@ test("Retrieve via generic find", options, async function () {
   assertEquals(account.length, 1);
 });
 
+test("Retrieve via simplified filter (where clause)", options, async function () {
+  const account = await repo.find({ id });
+  assertEquals(account.length, 1);
+});
+
 test("Retrieve via another column", options, async function () {
   const account = await repo.findOne({ where: { name: NAME } }) as AccountModel;
   assertExists(account);
@@ -54,8 +59,13 @@ test("Retrieve via SQL query", options, async function () {
   assertEquals(accounts[0].name, NAME);
 });
 
+test("Retrieve via SQL query with named parameter(s)", options, async function () {
+  const records = await DB.query(`SELECT * FROM accounts WHERE name = :n`, { n: NAME });
+  assertEquals(records.length, 1);
+});
+
 test("Boolean Values", options, async function () {
-  const accounts = await repo.find({ where: { name: "xyz", enabled: true } });
+  const accounts = await repo.find({ name: "xyz", enabled: true });
   assertEquals(accounts.length, 0);
 });
 

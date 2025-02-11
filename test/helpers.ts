@@ -42,7 +42,6 @@ export async function createTables(schemas: Schema[]) {
   for (const schema of schemas) {
     if (DB.type !== DB.Provider.SQLITE) await DB.execute(`DROP TABLE IF EXISTS ${schema.table} CASCADE;`);
     const sql = DDL.createTable(schema, DB.type as DB.Provider);
-    console.log(sql);
     await dbExec(sql);
   }
 }
