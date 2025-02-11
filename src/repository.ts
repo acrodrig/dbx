@@ -154,8 +154,6 @@ export class Repository<T extends Identifiable> extends EventTarget {
 
   // https://dev.mysql.com/doc/refman/8.0/en/select.html
   async findById(id: number | string, debug?: boolean): Promise<T | undefined> {
-    assert(typeof id === "number" && Number.isInteger(id), "Parameter 'id' must be an integer");
-
     const whereTree: Primitive[] = [];
     const sql = `SELECT * FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
     const parameters = [id, ...whereTree];

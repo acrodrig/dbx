@@ -19,7 +19,7 @@ export interface Property {
   pattern?: string;
   readOnly?: boolean;
   uniqueItems?: boolean;
-  type: "boolean" | "date" | "integer" | "number" | "object" | "string";
+  type: "array" | "boolean" | "date" | "integer" | "number" | "object" | "string";
   writeOnly?: boolean;
 }
 

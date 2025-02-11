@@ -33,6 +33,10 @@ test("Basic entity store/retrieve", options, async function () {
   account = await repo.findById(id) as AccountModel;
   assertExists(account);
 
+  // Retrieve by String ID (using lax SQL parameter parsing)
+  account = await repo.findById(id.toString()) as AccountModel;
+  assertExists(account);
+
   // // Make sure JSON is retrieved correctly
   assertEquals(account.preferences, { wrap: true, minAge: 18 });
 });
