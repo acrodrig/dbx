@@ -18,7 +18,7 @@ export interface Property {
   minimum?: number | string;
   pattern?: string;
   readOnly?: boolean;
-  uniqueItems?: boolean;
+  unique?: boolean;
   type: "array" | "boolean" | "date" | "integer" | "number" | "object" | "string";
   writeOnly?: boolean;
 }
@@ -27,7 +27,9 @@ export interface Property {
 export interface Column extends Property {
   as?: string | { [key: string]: string };
   dateOn?: "delete" | "insert" | "update";
-  index?: boolean;
+  constraint?: string;
+  format?: string;
+  index?: string[];
   primaryKey?: boolean;
 }
 
@@ -53,6 +55,8 @@ export interface Relation {
 export type Constraint = { name?: string; check: string; enforced?: boolean; comment?: string; provider?: string };
 
 export interface Schema {
+  // Optional URL (with or without fragment to indicate date of generation) to the schema
+  $id?: string;
   // Name of relation, normally the table name (if it does not exist the class name will be used)
   table?: string;
   // Type of the object, which should correspond to the entity name (i.e. class)

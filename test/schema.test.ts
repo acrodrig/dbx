@@ -1,11 +1,11 @@
 #!/usr/bin/env -S deno test -A --check
 
 import type { JSONSchema7 } from "npm:@types/json-schema/7.0.15";
-import AccountSchema from "../resources/account.json" with { type: "json" };
+import schema from "../resources/account.json" with { type: "json" };
 
 Deno.test("Schema Types are proper JSON Schema", function () {
   // Validate that property is a JSON Schema
-  const _schema = AccountSchema as JSONSchema7;
+  const _schema = schema as JSONSchema7;
 
   // By compiling we check that all columns are properties
   const _id = _schema.properties.id as JSONSchema7;

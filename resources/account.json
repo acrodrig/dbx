@@ -3,19 +3,19 @@
     "type": "Account",
     "properties": {
         "id":          { "type": "integer", "primaryKey": true, "description": "Unique identifier, auto-generated. It's the primary key." },
-        "inserted":    { "type": "date",    "dateOn": "insert", "description": "Timestamp when current record is inserted" },
-        "updated":     { "type": "date",    "dateOn": "update", "description": "Timestamp when current record is updated" },
         "etag":        { "type": "string",  "description": "Possible ETag for all resources that are external. Allows for better synch-ing." },
         "comments":    { "type": "string",  "maxLength": 8192, "description": "General comments. Can be used for anything useful related to the instance." },
-        "country":     { "type": "string",  "default": "'US'", "description": "Country code" },
-        "email":       { "type": "string",  "uniqueItems": true, "description": "Main email to communicate for that account" },
+        "country":     { "type": "string",  "default": "'US'", "constraint": "LENGTH(country) <= 2", "description": "Country code" },
+        "email":       { "type": "string",  "unique": true, "description": "Main email to communicate for that account" },
         "established": { "type": "date",    "maxLength": 6, "minimum": "2020-01-01", "description": "Date on which the account was established" },
         "enabled":     { "type": "boolean", "default": true, "description": "Whether it is enabled or not. Disabled instances will not be used." },
-        "externalId":  { "type": "string",  "maxLength": 512, "uniqueItems": true, "description": "External unique ID, used to refer to external accounts" },
-        "phone":       { "type": "string",  "description": "Handle associated with the account" },
-        "name":        { "type": "string",  "uniqueItems": true, "description": "Descriptive name to identify the instance" },
+        "externalId":  { "type": "string",  "maxLength": 512, "unique": true, "description": "External unique ID, used to refer to external accounts" },
+        "name":        { "type": "string",  "unique": true, "description": "Descriptive name to identify the instance" },
+        "phone":       { "type": "string",  "index": ["phone"], "description": "Phone associated with the account" },
         "preferences": { "type": "object",  "default": { "wrap": true, "minAge": 18 }, "description": "All the general options associated with the account." },
-        "valueList":   { "type": "object",  "as": "JSON_EXTRACT(preferences, '$.*')", "description": "Auto-generated field with values" }
+        "valueList":   { "type": "object",  "ignore": true, "as": "JSON_EXTRACT(preferences, '$.*')", "description": "Auto-generated field with values" },
+        "inserted":    { "type": "date",    "dateOn": "insert", "description": "Timestamp when current record is inserted" },
+        "updated":     { "type": "date",    "dateOn": "update", "description": "Timestamp when current record is updated" }
     },
     "required": ["id", "country", "enabled", "name", "preferences"],
     "fullText": ["comments", "country", "phone", "name"],
@@ -25,7 +25,7 @@
         { "properties": ["id", "valueList", "enabled"], "array": 1 }
     ],
     "constraints": [
-        { "name": "email", "check": "email IS NULL OR email RLIKE '^[^@]+@[^@]+[.][^@]{2,}$'" },
-        { "name": "phone", "check": "phone IS NULL OR phone RLIKE '^[0-9]{8,16}$'" }
+        { "name": "email", "check": "email IS NULL OR email REGEXP '^[^@]+@[^@]+[.][^@]{2,}$'" },
+        { "name": "phone", "check": "phone IS NULL OR phone REGEXP '^[0-9]{8,16}$'" }
     ]
 }

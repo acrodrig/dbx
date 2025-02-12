@@ -2,21 +2,25 @@
  * Accounts class definition
  * @table accounts
  * @fullText comments, country, phone, name
+ * @index id, valueList, enabled
  */
 export default class Account {
   /** Unique identifier, auto-generated. It's the primary key. @primaryKey */
   id!: number;
 
+  /** Possible ETag for all resources that are external. Allows for better synch-ing. */
+  etag?: string;
+
   /** General comments. Can be used for anything useful related to the instance. @maxLength 8192  */
   comments?: string;
 
-  /** Country code */
+  /** Country code @constraint LENGTH(country) <= 2 */
   country = "US";
 
   /**
    * Main email to communicate for that account
-   * @uniqueItems
-   * @constraint email - email IS NULL OR email RLIKE '^[^@]+@[^@]+[.][^@]{2,}$'
+   * @unique
+   * @constraint email IS NULL OR email REGEXP '^[^@]+@[^@]+[.][^@]{2,}$'
    * */
   email?: string;
 
@@ -26,27 +30,31 @@ export default class Account {
   /** Whether it is enabled or not. Disabled instances will not be used. */
   enabled = true;
 
-  /** External unique ID, used to refer to external accounts @maxLength 512 @uniqueItems */
+  /** External unique ID, used to refer to external accounts @maxLength 512 @unique */
   externalId?: string;
 
-  /** Handle associated with the account */
+  /** Descriptive name to identify the instance @unique */
   name!: string;
 
   /**
-   * Descriptive name to identify the instance
-   * @constraint phone - phone IS NULL OR phone RLIKE '^[0-9]{8,16}$'
+   * Phone associated with the account
+   * @constraint phone IS NULL OR phone REGEXP '^[0-9]{8,16}$'
+   * @index
    */
   phone?: string;
 
-  /** All the general options associated with the account. */
+  /** All the general options associated with the account.
+   * @default ('{"wrap":true,"minAge":18}')
+   **/
   preferences: { [key: string]: boolean|number|string; } = { wrap: true, minAge: 18 };
 
   /**
    * Auto-generated field with values
    * @as JSON_EXTRACT(preferences, '$.*')
    * @index id, valueList, enabled
-   * */
-  valueList: string[] = [];
+   * @format hidden
+   */
+  valueList?: string[] = [];
 
   constructor(data?: Pick<Account, "name"> & Partial<Account>) {
       Object.assign(this, data);

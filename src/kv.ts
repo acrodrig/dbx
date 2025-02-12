@@ -48,8 +48,8 @@ export class KV<T extends Identifiable> extends Repository<T> {
   async #update(key: Deno.KvKey = [], object: Partial<T>): Promise<T | undefined> {
     const entry = await kv.get<T>(key);
     // deno-lint-ignore no-explicit-any
-    const insertedAt = (entry.value as any)?.insertedAt ?? new Date();
-    if (META) object = Object.assign(object, { insertedAt, updatedAt: new Date() });
+    const inserted = (entry.value as any)?.inserted ?? new Date();
+    if (META) object = Object.assign(object, { inserted: inserted, updated: new Date() });
     await kv.set(key, Object.assign(entry.value ?? {}, object));
     return this.#build(object);
   }
@@ -119,7 +119,7 @@ export class KV<T extends Identifiable> extends Repository<T> {
       if (entry && entry.value) throw new Error(`Key ${key} already exists`);
     }
     if (!object.id) object.id = await this.#auto();
-    if (META) object = Object.assign(object, { insertedAt: new Date(), updatedAt: new Date() }) as T;
+    if (META) object = Object.assign(object, { inserted: new Date(), updated: new Date() }) as T;
     if (debug) console.debug({ method: "insert", key, object });
     await kv.set(key, object);
     return object;

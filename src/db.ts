@@ -8,8 +8,6 @@ import { Repository } from "./repository.ts";
 import type { Database as SQLite } from "jsr:@db/sqlite@0";
 import type { Client as Postgres } from "jsr:@dewars/postgres@0";
 
-const TTY = Deno.stderr.isTerminal();
-
 // See https://stackoverflow.com/questions/49285864/is-there-a-valueof-similar-to-keyof-in-typescript
 type Values<T> = T[keyof T];
 
@@ -58,7 +56,12 @@ export interface ClientConfig {
 
 async function connect(config: ClientConfig): Promise<Client> {
   // Make sure we have a valid configuration
-  config = Object.assign({ hostname: "127.0.0.1", port: 3306 });
+  config = Object.assign({
+    hostname: Deno.env.get("DB_HOST") ?? "127.0.0.1",
+    port: Number(Deno.env.get("DB_PORT")) || 3306,
+    username: Deno.env.get("DB_USER") ?? "primary",
+    password: Deno.env.get("DB_PASS"),
+  }, config);
 
   // Set the debug flag
   DB.debug = Deno.env.get("DEBUG")?.includes("dbx") || config.debug || false;
@@ -117,6 +120,10 @@ async function connect(config: ClientConfig): Promise<Client> {
   if (config.type === Provider.SQLITE) {
     const sqlite = await import("jsr:@db/sqlite@0");
     const nativeClient = new sqlite.Database(config.database ?? Deno.env.get("DB_FILE") ?? ":memory:") as SQLite;
+
+    // Add regex function
+    nativeClient.function("regexp", (str: string, re: string): boolean => new RegExp(re).exec(str) !== null);
+
     return new class implements Client {
       config = config;
       close() {
@@ -149,11 +156,13 @@ export class DB {
 
   // Get parent logger and if the logger has not been set, it will add a handler and level
   static mainLogger(level: LevelName = "INFO"): Logger {
-    const logger = getLogger("gateways");
+    const logger = getLogger("dbx");
+    if (logger.levelName !== "NOTSET") return logger;
+
+    // Attach console handler if not set, set debug flag, and initial level
     if (logger.handlers.length === 0) logger.handlers.push(new ConsoleHandler("DEBUG"));
     const debug = Deno.env.get("DEBUG")?.includes(logger.loggerName) || this.debug;
-    if (debug) logger.levelName = "DEBUG";
-    if (logger.levelName !== level) logger.levelName = level;
+    logger.levelName = debug ? "DEBUG" : level;
     return logger;
   }
 
@@ -162,7 +171,7 @@ export class DB {
     return sql.replaceAll(" ORDER BY NULL", "");
   };
 
-  static async connect(config: ClientConfig, schemas?: Schema[]): Promise<Client> {
+  static async connect(config: ClientConfig, schemas?: Schema[], ensure = false): Promise<Client> {
     // Iterate over the schemas and map them by name and type if it exists
     schemas?.forEach((s) => {
       DB.#schemas.set(s.table!, s);
@@ -175,6 +184,9 @@ export class DB {
     // Should wrap in debugger?
     if (this.debug) DB.client = new DebugClient(DB.client);
 
+    // Ensure connection?
+    if (ensure) await DB.ensure();
+
     return DB.client;
   }
 
@@ -182,13 +194,13 @@ export class DB {
     await this.client.close();
   }
 
-  static async ensure(safe = false) {
+  static async ensure(safe = false): Promise<string | undefined> {
     // Follow JDBC URL format: db://hostname:port/database
     const config = DB.client.config;
     const url = config.type + ":" + config.username + "@" + config.hostname + ":" + config.port + "/" + config.database;
 
     try {
-      const [ { sum } ] = await DB.query("SELECT 1+1 AS sum");
+      const [{ sum }] = await DB.query("SELECT 1+1 AS sum");
       if (sum === 2) return url;
     } catch (ex) {
       const message = "❌ Could not connect to DB '" + url + "', review DB configuration";
@@ -235,7 +247,7 @@ export class DB {
       // Need to await to be able to catch potential errors
       return await DB.client.query(DB._sqlFilter(sql), parameters, debug);
     } catch (ex) {
-      if (TTY) DB.error(ex as Error, sql, parameters);
+      if (Deno.stderr.isTerminal()) DB.error(ex as Error, sql, parameters);
       this.logger.error({ method: "query", sql: clean(sql), parameters, error: (ex as Error).message, stack: (ex as Error).stack });
       throw ex;
     }
@@ -258,7 +270,7 @@ export class DB {
       // Need to await to be able to catch potential errors
       return DB.client.execute(DB._sqlFilter(sql), parameters, debug);
     } catch (ex) {
-      if (TTY) DB.error(ex as Error, sql, parameters);
+      if (Deno.stderr.isTerminal()) DB.error(ex as Error, sql, parameters);
       this.logger.error({ method: "execute", sql: clean(sql), parameters, error: (ex as Error).message, stack: (ex as Error).stack });
       throw ex;
     }

@@ -21,18 +21,14 @@ const _BaseSchema: DB.Schema = {
   table: "_BaseSchema",
   properties: {
     id: { type: "integer", primaryKey: true, description: "Unique identifier, auto-generated. It's the primary key." },
-    insertedAt: { type: "date", dateOn: "insert", description: "Timestamp when current record is inserted" },
-    updatedAt: { type: "date", dateOn: "update", description: "Timestamp when current record is updated" },
     etag: { type: "string", maxLength: 1024, description: "Possible ETag for all resources that are external. Allows for better synch-ing." },
+    inserted: { type: "date", dateOn: "insert", index: ["inserted"], description: "Timestamp when current record is inserted" },
+    updated: { type: "date", dateOn: "update", index: ["updated"], description: "Timestamp when current record is updated" },
   },
-  indices: [
-    { properties: ["insertedAt"] },
-    { properties: ["updatedAt"] },
-  ],
 };
 
 export class DDL {
-  static EXTENSIONS = ["as", "constraints", "dateOn", "fullText", "index", "primaryKey", "relations", "table"];
+  static EXTENSIONS = ["as", "constraint", "dateOn", "fullText", "index", "primaryKey", "relations", "unique", "table"];
 
   static padWidth = 4;
   static defaultWidth = 128;
@@ -46,42 +42,72 @@ export class DDL {
    * @param schema - the tool-generated schema
    * @param type - the type of the schema which we may need to correct/override
    * @param table - the table name which we may need to correct/override
+   * @param $id - the URL of the schema file
    */
-  static cleanSchema(schema: Schema, type?: string, table?: string): Schema {
+  static cleanSchema(schema: Schema, type?: string, table?: string, $id?: string): Schema {
     if (type) schema.type = type;
     if (table) schema.table = table;
+    if ($id) schema.$id = $id + ($id.includes("#") ? "" : "#" + new Date().toISOString().substring(0, 19));
     if (typeof (schema.fullText) === "string") schema.fullText = (schema.fullText as string).split(",").map((s) => s.trim());
-    schema.indices ??= [];
-    Object.values(schema.properties).forEach((c) => {
+    Object.entries(schema.properties).forEach(([n, c]) => {
       if (!c.type) c.type = "string";
       if (typeof c.primaryKey === "string") c.primaryKey = true;
-      if (typeof c.uniqueItems === "string") c.uniqueItems = true;
+      if (typeof c.unique === "string") c.unique = true;
       if (c.format === "date-time") c.type = "date";
-      if (typeof c.index === "string") schema.indices!.push({ properties: (c.index as string).split(",").map((s) => s.trim()) });
+      if (typeof c.index === "string") c.index = (c.index ? c.index : n).split(",").map((s) => s.trim());
     });
     return schema;
   }
 
+  static outdatedSchemas(schemas: Schema[], dir: string): string[] {
+    return schemas.map((s) => this.outdatedSchema(s, dir)).filter((s) => s !== undefined);
+  }
+
+  /**
+   * Check if the schema is outdated by comparing the modification date of the file.
+   * Returns the file if it is outdated, or undefined if it is not.
+   * @param schema - the schema to check
+   * @param dir - the directory where the schema file is located
+   */
+  static outdatedSchema(schema: Schema, dir: string): string | undefined {
+    if (!schema.$id) throw new Error("Schema must have an $id property to test if it is outdated");
+
+    // Get file from $id
+    const url = new URL(schema.$id);
+    const file = (dir + url.pathname).replace(/\/\//g, "/");
+    const fileDate = Deno.statSync(file).mtime!.toISOString();
+    const schemaDate = url.hash.substring(1);
+
+    return fileDate > schemaDate ? file : undefined;
+  }
+
   // Enhance schema with standard properties
-  static enhanceSchema(schema: Schema, selected: string[] = ["id", "insertedAt", "updatedAt"]): Schema {
+  static enhanceSchema(schema: Schema, selected: string[] = ["id", "inserted", "updated"]): Schema {
     // Select properties that match the selected columns and add them to the schema
     if (!schema.properties) schema.properties = {};
-    for (const name of selected) schema.properties[name] = _BaseSchema.properties[name];
-
-    // Select indices
-    if (!schema.indices) schema.indices = [];
-    if (selected.includes("insertedAt")) schema.indices.push({ properties: ["insertedAt"] });
-    if (selected.includes("updatedAt")) schema.indices.push({ properties: ["updatedAt"] });
-
+    for (const name of selected) {
+      if (schema.properties[name]) continue;
+      schema.properties[name] = _BaseSchema.properties[name];
+    }
     return schema;
   }
 
   static #defaultValue(column: Column, dbType: string) {
+    const cd = column.default;
+
+    // Auto inserted/updated values
     if (column.dateOn === "insert") return "CURRENT_TIMESTAMP";
     if (column.dateOn === "update") return "CURRENT_TIMESTAMP" + ((dbType !== DB.Provider.MYSQL) ? "" : " ON UPDATE CURRENT_TIMESTAMP");
-    if (typeof (column.default) === "string" && !column.default.startsWith("'") && !column.default.endsWith("'")) return "'" + column.default + "'";
-    if (typeof (column.default) === "object") return "('" + JSON.stringify(column.default) + "')";
-    return column.default;
+
+    // Generated fields should NOT have a default value
+    if (column.as) return undefined;
+
+    // Respect object defaults as well as auto-quote strings
+    if (typeof cd === "string" && cd.startsWith("('") && cd.endsWith("')")) return cd;
+    if (typeof cd === "string" && !cd.startsWith("'") && !cd.endsWith("'")) return "'" + cd + "'";
+    if (typeof cd === "object") return "('" + JSON.stringify(cd) + "')";
+
+    return cd;
   }
 
   // Column generator
@@ -96,15 +122,16 @@ export class DDL {
     const gen = autoIncrement ? serialType[dbType as keyof typeof serialType] : "";
     const expr = column.as && (typeof column.as === "string" ? DB._sqlFilter(column.as) : column.as[dbType]);
     const as = expr ? " GENERATED ALWAYS AS (" + expr + ") STORED" : "";
-    const def = Object.hasOwn(column, "default") || Object.hasOwn(column, "dateOn") ? " DEFAULT " + this.#defaultValue(column, dbType) : "";
-    const key = primaryKey ? " PRIMARY KEY" : (column.uniqueItems !== undefined ? " UNIQUE" : "");
+    const dv = this.#defaultValue(column, dbType);
+    // const def = Object.hasOwn(column, "default") || Object.hasOwn(column, "dateOn") ? " DEFAULT " + this.#defaultValue(column, dbType) : "";
+    const key = primaryKey ? " PRIMARY KEY" : (column.unique !== undefined ? " UNIQUE" : "");
     const comment = (dbType === DB.Provider.MYSQL) && column.description ? " COMMENT '" + column.description.replace(/'/g, "''") + "'" : "";
 
     // Correct Postgres JSON type
     if (dbType === DB.Provider.POSTGRES && type === "JSON") type = "JSONB";
     if (dbType === DB.Provider.POSTGRES && autoIncrement) type = "SERIAL";
 
-    return `${pad}${name.padEnd(namePad)}${type}${length}${nullable}${as}${def}${key}${gen}${comment},\n`;
+    return `${pad}${name.padEnd(namePad)}${type}${length}${nullable}${as}${dv ? " DEFAULT " + dv : ""}${key}${gen}${comment},\n`;
   }
 
   // Index generator
@@ -144,22 +171,23 @@ export class DDL {
   }
 
   // Constraint independent generator
-  static createColumnConstraint(_dbType: string, parent: string, name: string, column: Column, padWidth = 4): string {
+  static createColumnConstraint(dbType: string, parent: string, name: string, column: Column, padWidth = 4): string {
     const pad = "".padEnd(padWidth);
     const value = (v: number | string) => typeof v === "string" ? "'" + v + "'" : v;
     let expr = "";
-    if (column.maximum) expr += `${name} >= ${value(column.maximum)}`;
-    if (column.minimum) expr += `${name} >= ${value(column.minimum)}`;
+    if (column.constraint) expr = column.constraint;
+    else if (column.maximum) expr += `${name} >= ${value(column.maximum)}`;
+    else if (column.minimum) expr += `${name} >= ${value(column.minimum)}`;
     name = parent + "_" + name;
-    return expr ? `${pad}${name ? "CONSTRAINT " + name + " " : ""}CHECK (${expr}),\n` : "";
+    return expr ? `${pad}${name && dbType !== "sqlite" ? "CONSTRAINT " + name + " " : ""}CHECK (${expr}),\n` : "";
   }
 
   // Constraint independent generator
-  static createIndependentConstraint(_dbType: string, parent: string, constraint: Constraint, padWidth = 4): string {
+  static createIndependentConstraint(dbType: string, parent: string, constraint: Constraint, padWidth = 4): string {
     const pad = "".padEnd(padWidth), simple = typeof constraint === "string";
     const name = simple ? undefined : (parent + "_" + constraint.name).toLowerCase();
     const expr = simple ? constraint : constraint.check;
-    return `${pad}${name ? "CONSTRAINT " + name + " " : ""}CHECK (${expr}),\n`;
+    return `${pad}${name && dbType !== "sqlite" ? "CONSTRAINT " + name + " " : ""}CHECK (${expr}),\n`;
   }
 
   // Uses the most standard MySQL syntax, and then it is fixed afterward
@@ -176,17 +204,24 @@ export class DDL {
     const columns = Object.entries(schema.properties).map(([n, c]) => this.createColumn(dbType, n, c!, required(n), namePad)).join("");
     const relations = !sqlite && Object.entries(schema.relations || []).map(([n, r]) => this.createRelation(dbType, table, n, r!)).join("") || "";
 
-    // Create constraints
+    // Create constraints (and sort lines for consistency)
     const filter = (c: Constraint) => !c.provider || c.provider === dbType;
     const columnConstraints = Object.entries(schema.properties || {}).map(([n, c]) => this.createColumnConstraint(dbType, table, n, c));
     const independentConstraints = (schema.constraints || []).filter(filter).map((c) => this.createIndependentConstraint(dbType, table, c));
-    const constraints = !sqlite && [...columnConstraints, ...independentConstraints].join("") || "";
+    const constraints = [...columnConstraints, ...independentConstraints].sort().join("");
 
     // Create sql
     let sql = `CREATE TABLE IF NOT EXISTS ${table} (\n${columns}${relations}${constraints})`;
 
-    // Independent indexes
-    if (schema.indices) sql += "\n" + schema.indices?.map((i) => this.createIndex(dbType, i, 0, table)).join("");
+    // Independent indexes (and sort lines for consistency)
+    const indices = schema.indices?.slice() ?? [];
+    Object.values(schema.properties).forEach((c) => {
+      if (!c.index?.length) return;
+      const types = c.index!.map((n) => schema.properties[n].type);
+      const array = types.includes("array") ? types.indexOf("array") : undefined;
+      indices!.push({ properties: c.index!, array });
+    });
+    if (indices.length) sql += "\n" + indices?.map((i) => this.createIndex(dbType, i, 0, table)).sort().join("");
 
     // Full text index
     if (schema.fullText?.length) sql += this.createFullTextIndex(dbType, schema.fullText, 0, table);
@@ -204,6 +239,7 @@ export class DDL {
       if (m === "DATETIME") return "TIMESTAMP";
       if (m === "JSON_EXTRACT") return "JSONB_EXTRACT_PATH";
       if (m === "RLIKE") return "~*";
+      if (m === "REGEXP") return "~*";
       return m;
     });
   }
