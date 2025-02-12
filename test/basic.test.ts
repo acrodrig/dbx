@@ -82,8 +82,8 @@ Deno.test("DateTime Values (including Temporal)", options, async function () {
 
   // Execute in a more raw form to test temporal parameters
   const sql = "SELECT COUNT(1) AS count FROM accounts WHERE established < ?";
-  assertEquals(await DB.query(sql,[ Temporal.PlainDate.from("2000-01-01") ]), [ { count: 0 } ]);
-  assertEquals(await DB.query(sql,[ "2100-01-01" ]), [ { count: 1 } ]);
+  assertEquals(await DB.query(sql, [Temporal.PlainDate.from("2000-01-01")]), [{ count: 0 }]);
+  assertEquals(await DB.query(sql, ["2100-01-01"]), [{ count: 1 }]);
 });
 
 Deno.test("Full Text search", options, async function () {

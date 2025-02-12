@@ -12,8 +12,9 @@ import type { Client as Postgres } from "jsr:@dewars/postgres@0";
 type Values<T> = T[keyof T];
 
 // Syntactic Sugar
-function clean(sql: string) {
-  return DB._sqlFilter(sql).replaceAll(/[ \n\r\t]+/g, " ").trim();
+function clean(sql: string, color = true): string {
+  sql = DB._sqlFilter(sql).replaceAll(/[ \n\r\t]+/g, " ").trim();
+  return color ? white(sql) : sql;
 }
 
 const Hook = {
@@ -217,8 +218,10 @@ export class DB {
   static _transformParameters(sql: string, objectParameters: { [key: string]: unknown }, arrayParameters: unknown[], safe?: boolean): string {
     arrayParameters.splice(0, arrayParameters.length);
     return sql.replace(/:[$A-Z_][0-9A-Z_$]*/ig, function (name) {
+      const exists = Object.hasOwn(objectParameters, name.substring(1));
       const value = objectParameters[name.substring(1)];
-      if (value === undefined && !safe) throw new Error("Undefined parameter '" + name + "'");
+      if (!exists && !safe) throw new Error("Parameter '" + name + "' is not present in parameters ("+JSON.stringify(objectParameters)+")");
+      if (value === undefined && !safe) throw new Error("Parameter '" + name + "' exists but is undefined in ("+JSON.stringify(objectParameters)+")");
       const isArray = Array.isArray(value);
       // If it is an array we need to repeat N times the '?' and append all the values
       if (isArray) arrayParameters.push(...value);
