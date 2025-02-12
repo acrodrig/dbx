@@ -52,10 +52,10 @@ CREATE INDEX accounts_updated ON accounts (updated);
 
 Deno.test("Table Creation SQLite", function () {
   const sddl = DDL.createTable(staticSchema as Schema, "sqlite", "accounts");
-  if (DEBUG) console.log(`\nSQLite\n${HR}\n${sddl}\n\n`);
+  if (DEBUG) console.debug(`\nSQLite\n${HR}\n${sddl}\n\n`);
   assertEquals(sddl.trim(), SQLITE);
   const dddl = DDL.createTable(dynamicSchema as Schema, "sqlite", "accounts");
-  console.log(`\nSQLite\n${HR}\n${dddl}\n\n`);
+  if (DEBUG) console.debug(`\nSQLite\n${HR}\n${dddl}\n\n`);
   assertEquals(dddl.trim(), SQLITE);
 });
 
@@ -89,10 +89,10 @@ CREATE FULLTEXT INDEX accounts_fulltext ON accounts (comments,country,phone,name
 
 Deno.test("Table Creation MySQL", function () {
   const sddl = DDL.createTable(staticSchema as Schema, "mysql", "accounts");
-  if (DEBUG) console.log(`\nMYSQL\n${HR}\n${sddl}\n\n`);
+  if (DEBUG) console.debug(`\nMYSQL\n${HR}\n${sddl}\n\n`);
   assertEquals(sddl.trim(), MYSQL);
   const dddl = DDL.createTable(dynamicSchema as Schema, "mysql", "accounts");
-  if (DEBUG) console.log(`\nMYSQL\n${HR}\n${dddl}\n\n`);
+  if (DEBUG) console.debug(`\nMYSQL\n${HR}\n${dddl}\n\n`);
   assertEquals(dddl.trim(), MYSQL);
 });
 
@@ -125,9 +125,12 @@ CREATE INDEX accounts_fulltext ON accounts USING GIN (TO_TSVECTOR('english', COA
 `.trim();
 
 Deno.test("Table Creation Postgres", function () {
-  const ddl = DDL.createTable(staticSchema as Schema, "postgres");
-  if (DEBUG) console.log(`\nPostgres\n${HR}\n${ddl}\n\n`);
-  assertEquals(ddl.trim(), POSTGRES);
+  const sddl = DDL.createTable(staticSchema as Schema, "postgres");
+  if (DEBUG) console.debug(`\nPostgres\n${HR}\n${sddl}\n\n`);
+  assertEquals(sddl.trim(), POSTGRES);
+  const dddl = DDL.createTable(dynamicSchema as Schema, "postgres");
+  if (DEBUG) console.debug(`\nPostgres\n${HR}\n${dddl}\n\n`);
+  assertEquals(dddl.trim(), POSTGRES);
 });
 
 // Execute the table creation on the provided platform

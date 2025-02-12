@@ -1,7 +1,7 @@
 import { blue, bold, white } from "@std/fmt/colors";
 import { ConsoleHandler, getLogger, type LevelName, type Logger } from "@std/log";
 import { DDL } from "./ddl.ts";
-import type { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
+import type { Class, Identifiable, Parameter, Row, Schema, Temporal } from "./types.ts";
 import { Repository } from "./repository.ts";
 
 // Import Driver Types
@@ -66,6 +66,10 @@ async function connect(config: ClientConfig): Promise<Client> {
   // Set the debug flag
   DB.debug = Deno.env.get("DEBUG")?.includes("dbx") || config.debug || false;
 
+  // Cleans parameters of temporal values
+  const isTemporal = (p: unknown): p is Temporal => p instanceof Temporal.PlainDate || p instanceof Temporal.PlainDateTime || p instanceof Temporal.PlainTime;
+  const cleanTemporals = (parameters: Parameter[] | undefined) => parameters?.map((p) => isTemporal(p) ? p.toString() : p);
+
   // MySQL
   if (config.type === Provider.MYSQL) {
     const mysql = await import("npm:mysql2@^3/promise");
@@ -83,13 +87,13 @@ async function connect(config: ClientConfig): Promise<Client> {
       }
       async execute(sql: string, parameters?: Parameter[]) {
         // deno-lint-ignore no-explicit-any
-        const [rsh] = await (nativeClient as any).execute(sql, parameters);
+        const [rsh] = await (nativeClient as any).execute(sql, cleanTemporals(parameters));
         // deno-lint-ignore no-explicit-any
         return { affectedRows: (rsh as any).affectedRows, lastInsertId: (rsh as any).insertId };
       }
       async query(sql: string, parameters?: Parameter[]) {
         // deno-lint-ignore no-explicit-any
-        const [rows] = await (nativeClient as any).query(sql, parameters);
+        const [rows] = await (nativeClient as any).query(sql, cleanTemporals(parameters));
         return rows as Row[];
       }
     }();
@@ -106,11 +110,11 @@ async function connect(config: ClientConfig): Promise<Client> {
         return nativeClient.end();
       }
       async execute(sql: string, parameters?: Parameter[]) {
-        const qar = await nativeClient.queryArray(sql, parameters);
+        const qar = await nativeClient.queryArray(sql, cleanTemporals(parameters));
         return { affectedRows: qar.rowCount, lastInsertId: qar.rows[0]?.[0] as number ?? undefined };
       }
       async query(sql: string, parameters?: Parameter[]) {
-        const qor = await nativeClient.queryObject(sql, parameters);
+        const qor = await nativeClient.queryObject(sql, cleanTemporals(parameters));
         return qor.rows as Row[];
       }
     }();
@@ -130,11 +134,11 @@ async function connect(config: ClientConfig): Promise<Client> {
         return Promise.resolve(nativeClient.close());
       }
       execute(sql: string, parameters?: Parameter[]) {
-        nativeClient.exec(sql, parameters);
+        nativeClient.exec(sql, cleanTemporals(parameters));
         return Promise.resolve({ affectedRows: nativeClient.changes, lastInsertId: nativeClient.lastInsertRowId });
       }
       query(sql: string, parameters?: Parameter[]) {
-        return Promise.resolve(nativeClient.prepare(sql).all(parameters));
+        return Promise.resolve(nativeClient.prepare(sql).all(cleanTemporals(parameters)));
       }
     }();
   }

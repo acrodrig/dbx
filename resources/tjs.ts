@@ -12,4 +12,4 @@ const program = TJS.getProgramFromFiles([ import.meta.dirname! + "/account.ts" ]
 
 // We can either get the schema for one file and one type...
 const schema = DDL.cleanSchema(TJS.generateSchema(program, "Account", settings) as Schema);
-console.log(schema);
+console.info(schema);

@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno test -A
+#!/usr/bin/env -S deno test -A --unstable-temporal
 
 import { assert, assertEquals, assertExists, assertRejects } from "@std/assert";
 import type { Schema } from "../src/types.ts";
@@ -72,9 +72,18 @@ Deno.test("Boolean Values", options, async function () {
   assertEquals(accounts.length, 0);
 });
 
-Deno.test("DateTime Values", options, async function () {
-  const account = await repo.findOne({});
+Deno.test("DateTime Values (including Temporal)", options, async function () {
+  const account = await repo.findOne();
   assertEquals(account!.established!.getMilliseconds(), 123);
+
+  // Using actual dates
+  assertEquals(await repo.count({ established: { lt: new Date("2000-01-01") } }), 0);
+  assertEquals(await repo.count({ established: { lt: new Date("2100-01-01") } }), 1);
+
+  // Execute in a more raw form to test temporal parameters
+  const sql = "SELECT COUNT(1) AS count FROM accounts WHERE established < ?";
+  assertEquals(await DB.query(sql,[ Temporal.PlainDate.from("2000-01-01") ]), [ { count: 0 } ]);
+  assertEquals(await DB.query(sql,[ "2100-01-01" ]), [ { count: 1 } ]);
 });
 
 Deno.test("Full Text search", options, async function () {
