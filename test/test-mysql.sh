@@ -27,7 +27,7 @@ docker exec -it "$NAME" mysql -u root -e "$SQL"
 # Run MySQL tests
 echo "🧪 Running Tests ..."
 echo "------------------------------------------------------------------------------"
-TEST_PROVIDER="$NAME" TEST_PORT="$PORT" deno test -A --unstable-kv --unstable-temporal
+TEST_PROVIDER="$NAME" TEST_PORT="$PORT" deno test -A --unstable-kv
 echo "------------------------------------------------------------------------------"
 
 # Stop and delete the container

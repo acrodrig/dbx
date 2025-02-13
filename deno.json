@@ -12,16 +12,17 @@
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@^1",
+    "@std/async": "jsr:@std/async@^1",
+    "@std/cache": "jsr:@std/cache@^0",
     "@std/collections": "jsr:@std/collections@^1",
-    "@std/fmt": "jsr:@std/fmt@^1",
-    "@std/log": "jsr:@std/log@^0"
+    "@std/fmt": "jsr:@std/fmt@^1"
   },
   "lock": false,
   "tasks": {
     "check": "deno check **/*.ts && deno lint && deno fmt --check",
     "lint": "deno lint src test",
     "release": "release",
-    "test": "deno test -A --unstable-kv --unstable-temporal",
+    "test": "deno test -A --unstable-kv",
     "test-mysql": "./test/test-mysql.sh",
     "test-postgres": "./test/test-postgres.sh"
   }

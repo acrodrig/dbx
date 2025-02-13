@@ -1,7 +1,5 @@
-import { blue, bold, white } from "@std/fmt/colors";
-import { ConsoleHandler, getLogger, type LevelName, type Logger } from "@std/log";
 import { DDL } from "./ddl.ts";
-import type { Class, Identifiable, Parameter, Row, Schema, Temporal } from "./types.ts";
+import type { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
 
 // Import Driver Types
@@ -12,9 +10,8 @@ import type { Client as Postgres } from "jsr:@dewars/postgres@0";
 type Values<T> = T[keyof T];
 
 // Syntactic Sugar
-function clean(sql: string, color = true): string {
-  sql = DB._sqlFilter(sql).replaceAll(/[ \n\r\t]+/g, " ").trim();
-  return color ? white(sql) : sql;
+function clean(sql: string): string {
+  return DB._sqlFilter(sql).replaceAll(/[ \n\r\t]+/g, " ").trim();
 }
 
 const Hook = {
@@ -64,12 +61,9 @@ async function connect(config: ClientConfig): Promise<Client> {
     password: Deno.env.get("DB_PASS"),
   }, config);
 
-  // Set the debug flag
-  DB.debug = Deno.env.get("DEBUG")?.includes("dbx") || config.debug || false;
-
   // Cleans parameters of temporal values
-  const isTemporal = (p: unknown): p is Temporal => p instanceof Temporal.PlainDate || p instanceof Temporal.PlainDateTime || p instanceof Temporal.PlainTime;
-  const cleanTemporals = (parameters: Parameter[] | undefined) => parameters?.map((p) => isTemporal(p) ? p.toString() : p);
+  const isTemporal = (p: unknown) => p && ["PlainDate", "PlainDateTime", "PlainTime"].includes(p?.constructor?.name);
+  const cleanTemporals = (parameters: Parameter[] | undefined) => parameters?.map((p) => isTemporal(p) ? p!.toString() : p);
 
   // MySQL
   if (config.type === Provider.MYSQL) {
@@ -147,27 +141,22 @@ async function connect(config: ClientConfig): Promise<Client> {
 }
 
 export class DB {
+  static readonly LEVELS = ["debug", "info", "warn", "error", "none"];
   static Hook = Hook;
   static Provider = Provider;
   static readonly ALL = Number.MAX_SAFE_INTEGER;
   static client: Client;
-  static debug = false;
   static #schemas = new Map<string, Schema>();
+  static logger = DB.#createLogger();
   static type: string;
 
-  static get logger(): Logger {
-    return this.mainLogger();
-  }
-
-  // Get parent logger and if the logger has not been set, it will add a handler and level
-  static mainLogger(level: LevelName = "INFO"): Logger {
-    const logger = getLogger("dbx");
-    if (logger.levelName !== "NOTSET") return logger;
-
-    // Attach console handler if not set, set debug flag, and initial level
-    if (logger.handlers.length === 0) logger.handlers.push(new ConsoleHandler("DEBUG"));
-    const debug = Deno.env.get("DEBUG")?.includes(logger.loggerName) || this.debug;
-    logger.levelName = debug ? "DEBUG" : level;
+  static #createLogger(level: typeof DB.LEVELS[number] = "info"): Console & { level: string } {
+    const logger = Object.setPrototypeOf({ n: DB.LEVELS.indexOf(level) }, console) as Console & { level: string, n: number };
+    DB.LEVELS.forEach((l, i) => (logger as any)[l] = (...args: unknown[]) => logger.n <= i ? (console as any)[l](...args) : () => {});
+    Object.defineProperty(logger, "level", {
+      get: function () { return DB.LEVELS[this.n]; },
+      set: function (l: typeof DB.LEVELS[number]) { return this.n = DB.LEVELS.indexOf(l) },
+    });
     return logger;
   }
 
@@ -187,7 +176,9 @@ export class DB {
     DB.client = await connect(config);
 
     // Should wrap in debugger?
-    if (this.debug) DB.client = new DebugClient(DB.client);
+    // Deprecating behavior.
+    // const debug = Deno.env.get("DEBUG")?.includes("dbx") || config.debug || false;
+    // if (debug) DB.client = new DebugClient(DB.client);
 
     // Ensure connection?
     if (ensure) await DB.ensure();
@@ -220,8 +211,8 @@ export class DB {
     return sql.replace(/:[$A-Z_][0-9A-Z_$]*/ig, function (name) {
       const exists = Object.hasOwn(objectParameters, name.substring(1));
       const value = objectParameters[name.substring(1)];
-      if (!exists && !safe) throw new Error("Parameter '" + name + "' is not present in parameters ("+JSON.stringify(objectParameters)+")");
-      if (value === undefined && !safe) throw new Error("Parameter '" + name + "' exists but is undefined in ("+JSON.stringify(objectParameters)+")");
+      if (!exists && !safe) throw new Error("Parameter '" + name + "' is not present in parameters (" + JSON.stringify(objectParameters) + ")");
+      if (value === undefined && !safe) throw new Error("Parameter '" + name + "' exists but is undefined in (" + JSON.stringify(objectParameters) + ")");
       const isArray = Array.isArray(value);
       // If it is an array we need to repeat N times the '?' and append all the values
       if (isArray) arrayParameters.push(...value);
@@ -320,42 +311,6 @@ export class DB {
     console.error(clean(sql));
     console.error("---");
     console.error(parameters);
-  }
-}
-
-// Debug Client
-// deno-fmt-ignore
-const RESERVED = ["ACCESSIBLE","ADD","ALL","ALTER","ANALYZE","AND","AS","ASC","ASENSITIVE","BEFORE","BETWEEN","BIGINT","BINARY","BLOB","BOTH","BY","CALL","CASCADE","CASE","CHANGE","CHAR","CHARACTER","CHECK","COLLATE","COLUMN","CONDITION","CONSTRAINT","CONTINUE","CONVERT","CREATE","CROSS","CUBE","CUME_DIST","CURRENT_DATE","CURRENT_TIME","CURRENT_TIMESTAMP","CURRENT_USER","CURSOR","DATABASE","DATABASES","DAY_HOUR","DAY_MICROSECOND","DAY_MINUTE","DAY_SECOND","DEC","DECIMAL","DECLARE","DEFAULT","DELAYED","DELETE","DENSE_RANK","DESC","DESCRIBE","DETERMINISTIC","DISTINCT","DISTINCTROW","DIV","DOUBLE","DROP","DUAL","EACH","ELSE","ELSEIF","EMPTY","ENCLOSED","ESCAPED","EXCEPT","EXISTS","EXIT","EXPLAIN","FALSE","FETCH","FIRST_VALUE","FLOAT","FLOAT4","FLOAT8","FOR","FORCE","FOREIGN","FROM","FULLTEXT","FUNCTION","GENERATED","GET","GRANT","GROUP","GROUPING","GROUPS","HAVING","HIGH_PRIORITY","HOUR_MICROSECOND","HOUR_MINUTE","HOUR_SECOND","IF","IGNORE","IN","INDEX","INFILE","INNER","INOUT","INSENSITIVE","INSERT","INT","INT1","INT2","INT3","INT4","INT8","INTEGER","INTERSECT","INTERVAL","INTO","IO_AFTER_GTIDS","IO_BEFORE_GTIDS","IS","ITERATE","JOIN","JSON_TABLE","KEY","KEYS","KILL","LAG","LAST_VALUE","LATERAL","LEAD","LEADING","LEAVE","LEFT","LIKE","LIMIT","LINEAR","LINES","LOAD","LOCALTIME","LOCALTIMESTAMP","LOCK","LONG","LONGBLOB","LONGTEXT","LOOP","LOW_PRIORITY","MASTER_BIND","MASTER_SSL_VERIFY_SERVER_CERT","MATCH","MAXVALUE","MEDIUMBLOB","MEDIUMINT","MEDIUMTEXT","MIDDLEINT","MINUTE_MICROSECOND","MINUTE_SECOND","MOD","MODIFIES","NATURAL","NOT","NO_WRITE_TO_BINLOG","NTH_VALUE","NTILE","NULL","NUMERIC","OF","ON","OPTIMIZE","OPTIMIZER_COSTS","OPTION","OPTIONALLY","OR","ORDER","OUT","OUTER","OUTFILE","OVER","PARTITION","PERCENT_RANK","PRECISION","PRIMARY","PROCEDURE","PURGE","RANGE","RANK","READ","READS","READ_WRITE","REAL","RECURSIVE","REFERENCES","REGEXP","RELEASE","RENAME","REPEAT","REPLACE","REQUIRE","RESIGNAL","RESTRICT","RETURN","REVOKE","RIGHT","RLIKE","ROW","ROWS","ROW_NUMBER","SCHEMA","SCHEMAS","SECOND_MICROSECOND","SELECT","SENSITIVE","SEPARATOR","SET","SHOW","SIGNAL","SMALLINT","SPATIAL","SPECIFIC","SQL","SQLEXCEPTION","SQLSTATE","SQLWARNING","SQL_BIG_RESULT","SQL_CALC_FOUND_ROWS","SQL_SMALL_RESULT","SSL","STARTING","STORED","STRAIGHT_JOIN","SYSTEM","TABLE","TERMINATED","THEN","TINYBLOB","TINYINT","TINYTEXT","TO","TRAILING","TRIGGER","TRUE","UNDO","UNION","UNIQUE","UNLOCK","UNSIGNED","UPDATE","USAGE","USE","USING","UTC_DATE","UTC_TIME","UTC_TIMESTAMP","VALUES","VARBINARY","VARCHAR","VARCHARACTER","VARYING","VIRTUAL","WHEN","WHERE","WHILE","WINDOW","WITH","WRITE","XOR","YEAR_MONTH","ZEROFILL"];
-
-class DebugClient implements Client {
-  config: ClientConfig;
-  reserved: RegExp;
-  constructor(private client: Client) {
-    this.config = client.config;
-    this.reserved = new RegExp("\\b(" + RESERVED.join("|") + ")\\b", "g");
-  }
-  close(): Promise<void> {
-    return this.client.close();
-  }
-  async execute(sql: string, parameters?: Parameter[], debug?: boolean): Promise<{ affectedRows?: number; lastInsertId?: number }> {
-    const start = Date.now();
-    const result = await this.client.execute(sql, parameters);
-    if (debug !== false) this.debug(sql, parameters ?? [], result.affectedRows ?? 0, start);
-    return result;
-  }
-  async query(sql: string, parameters?: Parameter[], debug?: boolean): Promise<Row[]> {
-    const start = Date.now();
-    const result = await this.client.query(sql, parameters);
-    if (debug !== false) this.debug(sql, parameters ?? [], result.length ?? 0, start);
-    return result;
-  }
-  debug(sql: string, parameters: Parameter[], rows: number, start: number, indent = "", pad = 20) {
-    // If the flag is ON will debug to console
-    const time = "(" + rows + " row" + (rows === 1 ? "" : "s") + " in " + (Date.now() - start) + "ms)";
-    let i = 0;
-    sql = sql.replace(/\?/g, () => blue(String(i < parameters.length ? parameters[i++] : "⚠️")));
-    sql = sql.replace(this.reserved, (w) => bold(w));
-    console.debug(indent + "🛢️ " + white(time.padStart(pad)) + " " + sql.trim());
   }
 }
 
