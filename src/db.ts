@@ -1,3 +1,5 @@
+import { blue, bold, white } from "@std/fmt/colors";
+import { hub } from "hub";
 import { DDL } from "./ddl.ts";
 import type { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
@@ -147,18 +149,8 @@ export class DB {
   static readonly ALL = Number.MAX_SAFE_INTEGER;
   static client: Client;
   static #schemas = new Map<string, Schema>();
-  static logger = DB.#createLogger();
+  static logger: ReturnType<typeof hub> = hub("dbx");
   static type: string;
-
-  static #createLogger(level: typeof DB.LEVELS[number] = "info"): Console & { level: string } {
-    const logger = Object.setPrototypeOf({ n: DB.LEVELS.indexOf(level) }, console) as Console & { level: string, n: number };
-    DB.LEVELS.forEach((l, i) => (logger as any)[l] = (...args: unknown[]) => logger.n <= i ? (console as any)[l](...args) : () => {});
-    Object.defineProperty(logger, "level", {
-      get: function () { return DB.LEVELS[this.n]; },
-      set: function (l: typeof DB.LEVELS[number]) { return this.n = DB.LEVELS.indexOf(l) },
-    });
-    return logger;
-  }
 
   // Mainly for debugging/tests (useful for SQLite)
   static _sqlFilter = function (sql: string): string {
@@ -228,6 +220,16 @@ export class DB {
     return sql;
   }
 
+  static #sql = hub("sql", undefined, { icon: "🛢️ " });
+  static _logSql(sql: string, parameters: Parameter[], rows: number, start: number) {
+    if (this.#sql.level !== "debug") return;
+    const time = "[" + rows + "row" + (rows === 1 ? "" : "s") + " in " + (Date.now() - start) + "ms]";
+    let i = 0;
+    sql = sql.replace(/\?/g, () => blue(String(i < parameters.length ? parameters[i++] : "⚠️")));
+    sql = sql.replace(RESERVED, (w) => bold(w));
+    this.#sql.debug(sql.trim() + "  " + bold(white(time)));
+  }
+
   static async query(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug?: boolean): Promise<Row[]> {
     // If values are not an array, they need to be transformed (as well as the SQL)
     const arrayParameters: Parameter[] = [];
@@ -242,8 +244,10 @@ export class DB {
 
     // At this point SQL contains only `?` and the parameters is an array
     try {
-      // Need to await to be able to catch potential errors
-      return await DB.client.query(DB._sqlFilter(sql), parameters, debug);
+      const start = Date.now();
+      const result = await DB.client.query(DB._sqlFilter(sql), parameters, debug);
+      this._logSql(sql, parameters ?? [], result.length ?? 0, start);
+      return result;
     } catch (ex) {
       if (Deno.stderr.isTerminal()) DB.error(ex as Error, sql, parameters);
       this.logger.error({ method: "query", sql: clean(sql), parameters, error: (ex as Error).message, stack: (ex as Error).stack });
@@ -251,7 +255,7 @@ export class DB {
     }
   }
 
-  static execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug?: boolean): Promise<{ affectedRows?: number; lastInsertId?: number }> {
+  static async execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug?: boolean): Promise<{ affectedRows?: number; lastInsertId?: number }> {
     // If values are not an array, they need to be transformed (as well as the SQL)
     const arrayParameters: Parameter[] = [];
     if (parameters && !Array.isArray(parameters)) {
@@ -265,8 +269,10 @@ export class DB {
 
     // At this point SQL contains only `?` and the parameters is an array
     try {
-      // Need to await to be able to catch potential errors
-      return DB.client.execute(DB._sqlFilter(sql), parameters, debug);
+      const start = Date.now();
+      const result = await DB.client.execute(DB._sqlFilter(sql), parameters, debug);
+      this._logSql(sql, parameters ?? [], result.affectedRows ?? 0, start);
+      return result;
     } catch (ex) {
       if (Deno.stderr.isTerminal()) DB.error(ex as Error, sql, parameters);
       this.logger.error({ method: "execute", sql: clean(sql), parameters, error: (ex as Error).message, stack: (ex as Error).stack });
@@ -313,6 +319,10 @@ export class DB {
     console.error(parameters);
   }
 }
+
+// Debug Client
+// deno-fmt-ignore
+const RESERVED = new RegExp("\\b(ACCESSIBLE|ADD|ALL|ALTER|ANALYZE|AND|AS|ASC|ASENSITIVE|BEFORE|BETWEEN|BIGINT|BINARY|BLOB|BOTH|BY|CALL|CASCADE|CASE|CHANGE|CHAR|CHARACTER|CHECK|COLLATE|COLUMN|CONDITION|CONSTRAINT|CONTINUE|CONVERT|CREATE|CROSS|CUBE|CUME_DIST|CURRENT_DATE|CURRENT_TIME|CURRENT_TIMESTAMP|CURRENT_USER|CURSOR|DATABASE|DATABASES|DAY_HOUR|DAY_MICROSECOND|DAY_MINUTE|DAY_SECOND|DEC|DECIMAL|DECLARE|DEFAULT|DELAYED|DELETE|DENSE_RANK|DESC|DESCRIBE|DETERMINISTIC|DISTINCT|DISTINCTROW|DIV|DOUBLE|DROP|DUAL|EACH|ELSE|ELSEIF|EMPTY|ENCLOSED|ESCAPED|EXCEPT|EXISTS|EXIT|EXPLAIN|FALSE|FETCH|FIRST_VALUE|FLOAT|FLOAT4|FLOAT8|FOR|FORCE|FOREIGN|FROM|FULLTEXT|FUNCTION|GENERATED|GET|GRANT|GROUP|GROUPING|GROUPS|HAVING|HIGH_PRIORITY|HOUR_MICROSECOND|HOUR_MINUTE|HOUR_SECOND|IF|IGNORE|IN|INDEX|INFILE|INNER|INOUT|INSENSITIVE|INSERT|INT|INT1|INT2|INT3|INT4|INT8|INTEGER|INTERSECT|INTERVAL|INTO|IO_AFTER_GTIDS|IO_BEFORE_GTIDS|IS|ITERATE|JOIN|JSON_TABLE|KEY|KEYS|KILL|LAG|LAST_VALUE|LATERAL|LEAD|LEADING|LEAVE|LEFT|LIKE|LIMIT|LINEAR|LINES|LOAD|LOCALTIME|LOCALTIMESTAMP|LOCK|LONG|LONGBLOB|LONGTEXT|LOOP|LOW_PRIORITY|MASTER_BIND|MASTER_SSL_VERIFY_SERVER_CERT|MATCH|MAXVALUE|MEDIUMBLOB|MEDIUMINT|MEDIUMTEXT|MIDDLEINT|MINUTE_MICROSECOND|MINUTE_SECOND|MOD|MODIFIES|NATURAL|NOT|NO_WRITE_TO_BINLOG|NTH_VALUE|NTILE|NULL|NUMERIC|OF|ON|OPTIMIZE|OPTIMIZER_COSTS|OPTION|OPTIONALLY|OR|ORDER|OUT|OUTER|OUTFILE|OVER|PARTITION|PERCENT_RANK|PRECISION|PRIMARY|PROCEDURE|PURGE|RANGE|RANK|READ|READS|READ_WRITE|REAL|RECURSIVE|REFERENCES|REGEXP|RELEASE|RENAME|REPEAT|REPLACE|REQUIRE|RESIGNAL|RESTRICT|RETURN|REVOKE|RIGHT|RLIKE|ROW|ROWS|ROW_NUMBER|SCHEMA|SCHEMAS|SECOND_MICROSECOND|SELECT|SENSITIVE|SEPARATOR|SET|SHOW|SIGNAL|SMALLINT|SPATIAL|SPECIFIC|SQL|SQLEXCEPTION|SQLSTATE|SQLWARNING|SQL_BIG_RESULT|SQL_CALC_FOUND_ROWS|SQL_SMALL_RESULT|SSL|STARTING|STORED|STRAIGHT_JOIN|SYSTEM|TABLE|TERMINATED|THEN|TINYBLOB|TINYINT|TINYTEXT|TO|TRAILING|TRIGGER|TRUE|UNDO|UNION|UNIQUE|UNLOCK|UNSIGNED|UPDATE|USAGE|USE|USING|UTC_DATE|UTC_TIME|UTC_TIMESTAMP|VALUES|VARBINARY|VARCHAR|VARCHARACTER|VARYING|VIRTUAL|WHEN|WHERE|WHILE|WINDOW|WITH|WRITE|XOR|YEAR_MONTH|ZEROFILL)\\b", "g");
 
 type LocalClientConfig = ClientConfig;
 type LocalProvider = Provider;

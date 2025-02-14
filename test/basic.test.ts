@@ -127,7 +127,7 @@ Deno.test("Find by ID and update", options, async function () {
 Deno.test("Constraint(s)", options, async function () {
   // Turn off logging temporarily and restore it after the test
   const level = DB.logger.level;
-  DB.logger.level = "none";
+  DB.logger.level = "off";
   assert(await repo.insert(new Account({ name: Math.random().toString() })));
   await assertRejects(() => repo.insert(new Account({ name: Math.random().toString(), email: "me" })));
   await assertRejects(() => repo.insert(new Account({ name: Math.random().toString(), country: "United States" })));
