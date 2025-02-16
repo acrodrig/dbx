@@ -213,3 +213,4 @@ gh secret set CODECOV_TOKEN --body "$CODECOV_TOKEN"
 - [ ] Add support for MongoDB (important given how many ORMs support it)
 - [ ] Add more tests and compute coverage (and publish it on README)
 - [ ] Investigate replacing `EventEmitter` with more native event listener (potential issue is type-specificity)
+- [ ] Add examples
