@@ -1,39 +1,7 @@
-# See https://deno.land/manual/advanced/continuous_integration
-
 on: [push,pull_request]
 
-# Set DENO_DIR to an absolute or relative path on the runner.
-env:
-  DENO_DIR: cache
-
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    permissions:
-      id-token: write # This is required for requesting the JWT
-      contents: read  # This is required for actions/checkout
-
-    steps:
-      # Check out the code
-      - uses: actions/checkout@v4
-
-      # Setup deno
-      - uses: denoland/setup-deno@v2
-
-      # Run tests collect code coverage and generate report from the collected coverage
-      - run: deno test --allow-all --unstable-kv --coverage=cov/
-      - run: deno coverage --lcov cov/ > cov.lcov
-
-      # Upload to Codecov (see https://github.com/marketplace/actions/codecov)
-      - uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: cov.lcov
-          fail_ci_if_error: true
-
-      # Check that code is correctly formatted
-      - run: deno fmt --check
-
-      # Publish to JSR
-      # - run: deno publish
+  ci:
+    uses: acrodrig/dotfiles/.github/workflows/ci.yml@master
+    with: { publish: true }
+    secrets: inherit
