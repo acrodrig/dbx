@@ -2,6 +2,5 @@ on: [push,pull_request]
 
 jobs:
   ci:
-    uses: acrodrig/dotfiles/.github/workflows/ci.yml@master
-    with: { publish: true }
+    uses: acrodrig/dotfiles/.github/workflows/example.yml@master
     secrets: inherit
