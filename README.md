@@ -2,7 +2,7 @@
 
 > 🚧 Beta code for the moment. Tread carefully.
 
-DBX is a simple, [Deno](https://deno.land/)-specific, minimalist library for accessing relational databases (MongoDB support 
+DBX is a simple, [Deno](https://deno.land/)-specific, minimalist library for accessing databases (MongoDB support 
 coming in the future). After years of working with Loopback, Knex, TypeORM and a short stop on DenoDB
 I decided that things could be made simpler (yes, I [know how standards proliferate](https://imgs.xkcd.com/comics/standards.png), sigh).
 
