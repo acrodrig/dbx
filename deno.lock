@@ -8,14 +8,17 @@
     "jsr:@std/assert@0.217": "0.217.0",
     "jsr:@std/assert@0.221": "0.221.0",
     "jsr:@std/assert@1": "1.0.11",
+    "jsr:@std/async@1": "1.0.10",
     "jsr:@std/async@^1.0.3": "1.0.10",
     "jsr:@std/bytes@^1.0.2": "1.0.5",
     "jsr:@std/datetime@~0.224.4": "0.224.5",
     "jsr:@std/encoding@0.221": "0.221.0",
     "jsr:@std/encoding@^1.0.1": "1.0.7",
+    "jsr:@std/encoding@^1.0.5": "1.0.7",
     "jsr:@std/fmt@0.221": "0.221.0",
     "jsr:@std/fmt@1": "1.0.5",
     "jsr:@std/fs@0.221": "0.221.0",
+    "jsr:@std/http@1": "1.0.9",
     "jsr:@std/internal@^1.0.5": "1.0.5",
     "jsr:@std/io@~0.224.4": "0.224.9",
     "jsr:@std/path@0.217": "0.217.0",
@@ -53,7 +56,7 @@
     "@dewars/postgres@0.20.0": {
       "integrity": "a6a92875c35187871f8cf96b57dbae34e75298b492305e65c8c970eabfb41d5b",
       "dependencies": [
-        "jsr:@std/async",
+        "jsr:@std/async@^1.0.3",
         "jsr:@std/bytes",
         "jsr:@std/datetime",
         "jsr:@std/encoding@^1.0.1",
@@ -118,6 +121,12 @@
       "dependencies": [
         "jsr:@std/assert@0.221",
         "jsr:@std/path@0.221"
+      ]
+    },
+    "@std/http@1.0.9": {
+      "integrity": "d409fc319a5e8d4a154e576c758752e9700282d74f31357a12fec6420f9ecb6c",
+      "dependencies": [
+        "jsr:@std/encoding@^1.0.5"
       ]
     },
     "@std/internal@1.0.5": {
@@ -483,7 +492,8 @@
       "jsr:@std/async@1",
       "jsr:@std/cache@0",
       "jsr:@std/collections@1",
-      "jsr:@std/fmt@1"
+      "jsr:@std/fmt@1",
+      "jsr:@std/http@1"
     ]
   }
 }

@@ -158,6 +158,7 @@ export class DB {
   };
 
   static async connect(config: ClientConfig, schemas?: Schema[], ensure = false): Promise<Client> {
+    DB.#schemas.clear();
     // Iterate over the schemas and map them by name and type if it exists
     schemas?.forEach((s) => {
       DB.#schemas.set(s.table!, s);

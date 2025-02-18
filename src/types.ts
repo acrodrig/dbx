@@ -55,7 +55,7 @@ export interface Relation {
 export type Constraint = { name?: string; check: string; enforced?: boolean; comment?: string; provider?: string };
 
 export interface Schema {
-  // Optional URL (with or without fragment to indicate date of generation) to the schema
+  // Optional URL (with or without fragment to indicate etag of generation) to the schema
   $id?: string;
   // Name of relation, normally the table name (if it does not exist the class name will be used)
   table?: string;
@@ -68,6 +68,7 @@ export interface Schema {
   indices?: Index[];
   relations?: { [key: string]: Relation };
   constraints?: Constraint[];
+  etag?: string;
 }
 
 export type Predicate<PT> = {

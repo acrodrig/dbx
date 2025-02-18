@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno test -A --no-check
 
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertExists, assertNotEquals } from "@std/assert";
 import { DDL } from "../src/ddl.ts";
 import type { Schema } from "../src/types.ts";
 import { createTables, dbInit, getProvider } from "./helpers.ts";
@@ -16,8 +16,8 @@ const DB = await dbInit(getProvider());
 import staticSchema from "../resources/account.json" with { type: "json" };
 
 // Generate dynamic schema to make sure it's the same result
-const classFiles = { "Account": "resources/account.ts" }
-const { Account: dynamicSchema } = await DDL.ensureSchemas(classFiles, import.meta.dirname! + "/../", true, true);
+const classFiles = { "Account": "resources/account.ts" };
+const { Account: dynamicSchema } = await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
 
 const SQLITE = `
 CREATE TABLE IF NOT EXISTS accounts (
@@ -147,6 +147,19 @@ Deno.test("Actual Table", async function () {
   // Select table from Information Schema
   const noTable = await DB.query(sql);
   assertEquals(noTable.length, 0);
+});
+
+// Execute the table creation on the provided platform
+Deno.test("Schema Generation", async function () {
+  const base = import.meta.dirname! + "/../";
+
+  // Generate two schemas in a row, they should be identical
+  const first = await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
+  assertExists(first);
+  assertExists(localStorage.getItem("dbx:schemas:" + base));
+  const second = await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
+  assertNotEquals(first, second);
+  assertEquals(JSON.stringify(first), JSON.stringify(second));
 });
 
 // Execute the table creation on the provided platform
