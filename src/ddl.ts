@@ -32,27 +32,32 @@ export class DDL {
   static defaultWidth = 128;
   static textWidth = 2048;
 
+  static getSchemas(base?: string): Record<string, Schema> {
+    const schemas = localStorage.getItem("dbx:schemas:" + (base ?? ""));
+    return schemas ? JSON.parse(schemas) : {};
+  }
 
-  static async ensureSchemas(classFiles: Record<string,string>, base?: string, enhance = false, force = false): Promise<Record<string, Schema>> {
+  static async ensureSchemas(classFiles: Record<string, string>, base?: string, enhance = false, force = false): Promise<Record<string, Schema>> {
     const TJS = (await import("npm:typescript-json-schema")).default;
 
     // Parameters for TypeScript JSON Schema
-    const validationKeywords= ["as", "constraint", "dateOn", "fullText", "index", "primaryKey", "relations", "unique", "table"];
+    const validationKeywords = ["as", "constraint", "dateOn", "fullText", "index", "primaryKey", "relations", "unique", "table"];
     const settings = { required: true, ignoreErrors: true, defaultNumberType: "integer", validationKeywords };
-    const compilerOptions = { lib: [ "es2022" ], module: "es2022", target: "es2022" };
+    const compilerOptions = { lib: ["es2022"], module: "es2022", target: "es2022" };
 
     // Get current set of schemas and find out which ones are outdated
-    const schemas = JSON.parse(localStorage.getItem("__schemas__") ?? "{}") as Record<string, Schema>;
-    const outdated = Object.values(schemas).length === 0 ? true : Object.values(schemas).some((s) => DDL.#outdatedSchema(s, base));
-    if (!force && !outdated) return schemas;
+    const schemas = this.getSchemas(base);
+    const outdated = Object.keys(schemas).length ? Object.values(schemas).some((s) => DDL.#outdatedSchema(s, base)) : true;
+    if (!force && !outdated) return schemas!;
 
     // Run schema generation (only if needed)
     const program = TJS.getProgramFromFiles(Object.values(classFiles), compilerOptions, base);
-    for (const [c,f] of Object.entries(classFiles)) {
+    for (const [c, f] of Object.entries(classFiles)) {
+      // deno-lint-ignore no-explicit-any
       schemas[c] = DDL.#cleanSchema(TJS.generateSchema(program, c, settings as any) as Schema, c, undefined, "file://./" + f);
       if (enhance) schemas[c] = DDL.enhanceSchema(schemas[c]);
     }
-    localStorage.setItem("__schemas__", JSON.stringify(schemas, null, 2));
+    localStorage.setItem("dbx:schemas:" + base, JSON.stringify(schemas, null, 2));
 
     // Return schema map (from class/type to schema)
     return schemas;
