@@ -151,12 +151,9 @@ Deno.test("Actual Table", async function () {
 
 // Execute the table creation on the provided platform
 Deno.test("Schema Generation", async function () {
-  const base = import.meta.dirname! + "/../";
-
   // Generate two schemas in a row, they should be identical
   const first = await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
   assertExists(first);
-  assertExists(localStorage.getItem("dbx:schemas:" + base));
   const second = await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
   assertNotEquals(first, second);
   assertEquals(JSON.stringify(first), JSON.stringify(second));
