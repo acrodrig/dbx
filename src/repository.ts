@@ -3,6 +3,8 @@ import { hub } from "hub";
 import { DB } from "./db.ts";
 import type { Class, Condition, Filter, Identifiable, Order, Primitive, Schema, Where } from "./types.ts";
 
+const log = hub("dbx");
+
 // Syntactic Sugar
 function join(label: string, count: number, separator = ","): string {
   return new Array(count).fill(label).join(separator);
@@ -39,8 +41,6 @@ const Hook = {
 
 // Loopback like model
 export class Repository<T extends Identifiable> extends EventTarget {
-  static #logger: ReturnType<typeof hub> = hub("dbx");
-
   table: string;
   type: Class<T>;
   schema?: Schema;
@@ -186,7 +186,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     if (debug) console.debug({ method: "insert", sql: clean(sql), parameters });
     this.dispatchEvent(new CustomEvent(Hook.BEFORE_INSERT, { detail: object }));
     const result = await DB.execute(sql, parameters as Primitive[]);
-    if (!result.lastInsertId) Repository.#logger.warn({ method: "insert", sql: clean(sql), warning: "Insert did produce a last inserted ID" });
+    if (!result.lastInsertId) log.warn({ method: "insert", sql: clean(sql), warning: "Insert did produce a last inserted ID" });
     if (result.lastInsertId) object.id = result.lastInsertId;
     this.dispatchEvent(new CustomEvent(Hook.AFTER_INSERT, { detail: object }));
     return object;
@@ -208,8 +208,8 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const result = await DB.execute(sql, parameters as Primitive[]);
     if (result.lastInsertId) object.id = result.lastInsertId;
     this.dispatchEvent(new CustomEvent(Hook.AFTER_UPDATE, { detail: object }));
-    if (result.affectedRows === 0) Repository.#logger.warn({ method: "update", sql: clean(sql), warning: "Update had no affected rows" });
-    if (result.affectedRows! > 1) Repository.#logger.warn({ method: "update", sql: clean(sql), warning: "Update had more than one affected rows" });
+    if (result.affectedRows === 0) log.warn({ method: "update", sql: clean(sql), warning: "Update had no affected rows" });
+    if (result.affectedRows! > 1) log.warn({ method: "update", sql: clean(sql), warning: "Update had more than one affected rows" });
     return result.affectedRows === 1 ? object as T : undefined;
   }
 
