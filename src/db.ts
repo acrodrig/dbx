@@ -249,8 +249,8 @@ export class DB {
       this._logSql(sql, parameters ?? [], result.length ?? 0, start);
       return result;
     } catch (ex) {
-      if (Deno.stderr.isTerminal()) DB.error(ex as Error, sql, parameters);
-      this.logger.error({ method: "query", sql: clean(sql), parameters, error: (ex as Error).message, stack: (ex as Error).stack });
+      this.logger.error({ method: "query", sql: clean(sql), parameters, error: (ex as Error).message });
+      this.logger.trace(ex);
       throw ex;
     }
   }
@@ -274,8 +274,8 @@ export class DB {
       this._logSql(sql, parameters ?? [], result.affectedRows ?? 0, start);
       return result;
     } catch (ex) {
-      if (Deno.stderr.isTerminal()) DB.error(ex as Error, sql, parameters);
-      this.logger.error({ method: "execute", sql: clean(sql), parameters, error: (ex as Error).message, stack: (ex as Error).stack });
+      this.logger.error({ method: "execute", sql: clean(sql), parameters, error: (ex as Error).message });
+      this.logger.trace(ex);
       throw ex;
     }
   }
@@ -309,14 +309,6 @@ export class DB {
 
     // Return repository
     return repository;
-  }
-
-  static error(ex: Error, sql: string, parameters?: Parameter[]) {
-    console.error("%cERROR: %s", "color: red", ex?.message);
-    console.error("---");
-    console.error(clean(sql));
-    console.error("---");
-    console.error(parameters);
   }
 }
 
