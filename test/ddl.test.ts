@@ -16,12 +16,8 @@ const DB = await dbInit(getProvider());
 import staticSchema from "../resources/account.json" with { type: "json" };
 
 // Generate dynamic schema to make sure it's the same result
-import * as TJS from "npm:typescript-json-schema";
-const base = import.meta.dirname! + "/../";
-const settings: TJS.PartialArgs = { required: true, defaultNumberType: "integer", ignoreErrors: true, validationKeywords: DDL.EXTENSIONS };
-const compilerOptions = { lib: ["es2022"], module: "es2022", target: "es2022" };
-const program = TJS.getProgramFromFiles(["resources/account.ts"], compilerOptions, base);
-const dynamicSchema = DDL.enhanceSchema(DDL.cleanSchema(TJS.generateSchema(program, "Account", settings) as Schema));
+const classFiles = { "Account": "resources/account.ts" }
+const { Account: dynamicSchema } = await DDL.ensureSchemas(classFiles, import.meta.dirname! + "/../", true, true);
 
 const SQLITE = `
 CREATE TABLE IF NOT EXISTS accounts (

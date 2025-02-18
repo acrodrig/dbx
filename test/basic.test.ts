@@ -1,6 +1,7 @@
 #!/usr/bin/env -S deno test -A
 
 import { assert, assertEquals, assertExists, assertRejects } from "@std/assert";
+import { hub } from "hub";
 import type { Schema } from "../src/types.ts";
 import { dbInit, getProvider } from "./helpers.ts";
 import Account from "../resources/account.ts";
@@ -126,12 +127,11 @@ Deno.test("Find by ID and update", options, async function () {
 
 Deno.test("Constraint(s)", options, async function () {
   // Turn off logging temporarily and restore it after the test
-  const level = DB.logger.level;
-  DB.logger.level = "off";
+  hub(false);
   assert(await repo.insert(new Account({ name: Math.random().toString() })));
   await assertRejects(() => repo.insert(new Account({ name: Math.random().toString(), email: "me" })));
   await assertRejects(() => repo.insert(new Account({ name: Math.random().toString(), country: "United States" })));
-  DB.logger.level = level;
+  hub(true);
 });
 
 Deno.test("Clean", options, async function () {

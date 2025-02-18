@@ -1,5 +1,6 @@
 import type { Column, Constraint, Index, Relation, Schema } from "./types.ts";
 import DB from "./db.ts";
+import * as TJS from "npm:typescript-json-schema@0.65.1";
 
 const dataTypes = {
   array: "JSON",
@@ -28,11 +29,35 @@ const _BaseSchema: DB.Schema = {
 };
 
 export class DDL {
-  static EXTENSIONS = ["as", "constraint", "dateOn", "fullText", "index", "primaryKey", "relations", "unique", "table"];
-
   static padWidth = 4;
   static defaultWidth = 128;
   static textWidth = 2048;
+
+
+  static async ensureSchemas(classFiles: Record<string,string>, base?: string, enhance = false, force = false): Promise<Record<string, Schema>> {
+    const TJS = (await import("npm:typescript-json-schema")).default;
+
+    // Parameters for TypeScript JSON Schema
+    const validationKeywords= ["as", "constraint", "dateOn", "fullText", "index", "primaryKey", "relations", "unique", "table"];
+    const settings = { required: true, ignoreErrors: true, defaultNumberType: "integer", validationKeywords };
+    const compilerOptions = { lib: [ "es2022" ], module: "es2022", target: "es2022" };
+
+    // Get current set of schemas and find out which ones are outdated
+    const schemas = JSON.parse(localStorage.getItem("__schemas__") ?? "{}") as Record<string, Schema>;
+    const outdated = Object.values(schemas).length === 0 ? true : Object.values(schemas).some((s) => DDL.#outdatedSchema(s, base));
+    if (!force && !outdated) return schemas;
+
+    // Run schema generation (only if needed)
+    const program = TJS.getProgramFromFiles(Object.values(classFiles), compilerOptions, base);
+    for (const [c,f] of Object.entries(classFiles)) {
+      schemas[c] = DDL.#cleanSchema(TJS.generateSchema(program, c, settings as any) as Schema, c, undefined, "file://./" + f);
+      if (enhance) schemas[c] = DDL.enhanceSchema(schemas[c]);
+    }
+    localStorage.setItem("__schemas__", JSON.stringify(schemas, null, 2));
+
+    // Return schema map (from class/type to schema)
+    return schemas;
+  }
 
   /**
    * When using tools such as [TJS](https://github.com/YousefED/typescript-json-schema) to
@@ -44,9 +69,10 @@ export class DDL {
    * @param table - the table name which we may need to correct/override
    * @param $id - the URL of the schema file
    */
-  static cleanSchema(schema: Schema, type?: string, table?: string, $id?: string): Schema {
+  static #cleanSchema(schema: Schema, type?: string, table?: string, $id?: string): Schema {
     if (type) schema.type = type;
     if (table) schema.table = table;
+    if (!schema.table) schema.table = type?.toLowerCase() ?? schema.type?.toLowerCase();
     if ($id) schema.$id = $id + ($id.includes("#") ? "" : "#" + new Date().toISOString().substring(0, 19));
     if (typeof (schema.fullText) === "string") schema.fullText = (schema.fullText as string).split(",").map((s) => s.trim());
     Object.entries(schema.properties).forEach(([n, c]) => {
@@ -59,17 +85,13 @@ export class DDL {
     return schema;
   }
 
-  static outdatedSchemas(schemas: Schema[], dir: string): string[] {
-    return schemas.map((s) => this.outdatedSchema(s, dir)).filter((s) => s !== undefined);
-  }
-
   /**
    * Check if the schema is outdated by comparing the modification date of the file.
    * Returns the file if it is outdated, or undefined if it is not.
    * @param schema - the schema to check
    * @param dir - the directory where the schema file is located
    */
-  static outdatedSchema(schema: Schema, dir: string): string | undefined {
+  static #outdatedSchema(schema: Schema, dir = ""): boolean {
     if (!schema.$id) throw new Error("Schema must have an $id property to test if it is outdated");
 
     // Get file from $id
@@ -78,7 +100,7 @@ export class DDL {
     const fileDate = Deno.statSync(file).mtime!.toISOString();
     const schemaDate = url.hash.substring(1);
 
-    return fileDate > schemaDate ? file : undefined;
+    return fileDate > schemaDate;
   }
 
   // Enhance schema with standard properties

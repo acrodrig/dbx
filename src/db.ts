@@ -145,7 +145,6 @@ async function connect(config: ClientConfig): Promise<Client> {
 }
 
 export class DB {
-  static readonly LEVELS = ["debug", "info", "warn", "error", "none"];
   static Hook = Hook;
   static Provider = Provider;
   static readonly ALL = Number.MAX_SAFE_INTEGER;
@@ -239,7 +238,6 @@ export class DB {
     }
     if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
-    if (debug !== false) log.debug({ method: "query", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "query", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
@@ -264,7 +262,6 @@ export class DB {
     }
     if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
-    if (debug !== false) log.debug({ method: "execute", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "execute", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
