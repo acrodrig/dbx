@@ -2,5 +2,7 @@ on: [push,pull_request]
 
 jobs:
   ci:
-    uses: acrodrig/github/.github/workflows/ci.yml@main
+    permissions: { contents: read, id-token: write }
+    uses: acrodrig/dots/.github/workflows/ci.yml@main
+    with: { publish: true }
     secrets: inherit

@@ -4,6 +4,8 @@ import { DDL } from "./ddl.ts";
 import type { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
 
+const log = hub("dbx"), sqlLog = hub("dbx:sql");
+
 // Import Driver Types
 import type { Database as SQLite } from "jsr:@db/sqlite@0";
 import type { Client as Postgres } from "jsr:@dewars/postgres@0";
@@ -149,7 +151,6 @@ export class DB {
   static readonly ALL = Number.MAX_SAFE_INTEGER;
   static client: Client;
   static #schemas = new Map<string, Schema>();
-  static logger: ReturnType<typeof hub> = hub("dbx");
   static type: string;
 
   // Mainly for debugging/tests (useful for SQLite)
@@ -220,14 +221,13 @@ export class DB {
     return sql;
   }
 
-  static #sql = hub("sql", undefined, { icon: "🛢️ " });
   static _logSql(sql: string, parameters: Parameter[], rows: number, start: number) {
-    if (this.#sql.level !== "debug") return;
+    if (sqlLog.level !== "debug") return;
     const time = "[" + rows + "row" + (rows === 1 ? "" : "s") + " in " + (Date.now() - start) + "ms]";
     let i = 0;
     sql = sql.replace(/\?/g, () => blue(String(i < parameters.length ? parameters[i++] : "⚠️")));
     sql = sql.replace(RESERVED, (w) => bold(w));
-    this.#sql.debug(sql.trim() + "  " + bold(white(time)));
+    sqlLog.debug(sql.trim() + "  " + bold(white(time)));
   }
 
   static async query(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug?: boolean): Promise<Row[]> {
@@ -239,7 +239,7 @@ export class DB {
     }
     if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
-    if (debug !== false) this.logger.debug({ method: "query", sql: clean(sql), parameters });
+    if (debug !== false) log.debug({ method: "query", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "query", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
@@ -249,8 +249,8 @@ export class DB {
       this._logSql(sql, parameters ?? [], result.length ?? 0, start);
       return result;
     } catch (ex) {
-      this.logger.error({ method: "query", sql: clean(sql), parameters, error: (ex as Error).message });
-      this.logger.trace(ex);
+      log.error({ method: "query", sql: clean(sql), parameters, error: (ex as Error).message });
+      log.trace(ex);
       throw ex;
     }
   }
@@ -264,7 +264,7 @@ export class DB {
     }
     if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
-    if (debug !== false) this.logger.debug({ method: "execute", sql: clean(sql), parameters });
+    if (debug !== false) log.debug({ method: "execute", sql: clean(sql), parameters });
     if (debug) console.debug({ method: "execute", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
@@ -274,8 +274,8 @@ export class DB {
       this._logSql(sql, parameters ?? [], result.affectedRows ?? 0, start);
       return result;
     } catch (ex) {
-      this.logger.error({ method: "execute", sql: clean(sql), parameters, error: (ex as Error).message });
-      this.logger.trace(ex);
+      log.error({ method: "execute", sql: clean(sql), parameters, error: (ex as Error).message });
+      log.trace(ex);
       throw ex;
     }
   }
