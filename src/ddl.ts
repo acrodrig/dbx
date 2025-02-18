@@ -1,6 +1,5 @@
 import type { Column, Constraint, Index, Relation, Schema } from "./types.ts";
 import DB from "./db.ts";
-import * as TJS from "npm:typescript-json-schema@0.65.1";
 
 const dataTypes = {
   array: "JSON",
