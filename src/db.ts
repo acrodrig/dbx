@@ -131,7 +131,7 @@ export class DB {
       this._logSql(sql, parameters ?? [], result.length ?? 0, start);
       return result;
     } catch (ex) {
-      log.error({ method: "query", sql: clean(sql), parameters, error: (ex as Error).message });
+      log.error({ method: "query", sql: clean(sql), parameters, message: (ex as Error).message });
       log.trace(ex);
       throw ex;
     }
@@ -155,7 +155,7 @@ export class DB {
       this._logSql(sql, parameters ?? [], result.affectedRows ?? 0, start);
       return result;
     } catch (ex) {
-      log.error({ method: "execute", sql: clean(sql), parameters, error: (ex as Error).message });
+      log.error({ method: "execute", sql: clean(sql), parameters, message: (ex as Error).message });
       log.trace(ex);
       throw ex;
     }

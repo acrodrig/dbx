@@ -7,9 +7,7 @@ import { createTables, dbInit, getProvider } from "./helpers.ts";
 
 // See https://github.com/denoland/deno_std/blob/main/testing/_diff_test.ts
 
-const DEBUG = Deno.env.get("DEBUG") !== undefined;
 const HR = "-".repeat(80);
-
 const DB = await dbInit(getProvider());
 
 // Import the static schema from the JSON file
@@ -48,10 +46,10 @@ CREATE INDEX accounts_updated ON accounts (updated);
 
 Deno.test("Table Creation SQLite", function () {
   const sddl = DDL.createTable(staticSchema as Schema, "sqlite", "accounts");
-  if (DEBUG) console.debug(`\nSQLite\n${HR}\n${sddl}\n\n`);
+  // console.debug(`\nSQLite\n${HR}\n${sddl}\n\n`);
   assertEquals(sddl.trim(), SQLITE);
   const dddl = DDL.createTable(dynamicSchema as Schema, "sqlite", "accounts");
-  if (DEBUG) console.debug(`\nSQLite\n${HR}\n${dddl}\n\n`);
+  // console.debug(`\nSQLite\n${HR}\n${dddl}\n\n`);
   assertEquals(dddl.trim(), SQLITE);
 });
 
@@ -85,10 +83,10 @@ CREATE FULLTEXT INDEX accounts_fulltext ON accounts (comments,country,phone,name
 
 Deno.test("Table Creation MySQL", function () {
   const sddl = DDL.createTable(staticSchema as Schema, "mysql", "accounts");
-  if (DEBUG) console.debug(`\nMYSQL\n${HR}\n${sddl}\n\n`);
+  // console.debug(`\nMYSQL\n${HR}\n${sddl}\n\n`);
   assertEquals(sddl.trim(), MYSQL);
   const dddl = DDL.createTable(dynamicSchema as Schema, "mysql", "accounts");
-  if (DEBUG) console.debug(`\nMYSQL\n${HR}\n${dddl}\n\n`);
+  // console.debug(`\nMYSQL\n${HR}\n${dddl}\n\n`);
   assertEquals(dddl.trim(), MYSQL);
 });
 
@@ -122,10 +120,10 @@ CREATE INDEX accounts_fulltext ON accounts USING GIN (TO_TSVECTOR('english', COA
 
 Deno.test("Table Creation Postgres", function () {
   const sddl = DDL.createTable(staticSchema as Schema, "postgres");
-  if (DEBUG) console.debug(`\nPostgres\n${HR}\n${sddl}\n\n`);
+  // console.debug(`\nPostgres\n${HR}\n${sddl}\n\n`);
   assertEquals(sddl.trim(), POSTGRES);
   const dddl = DDL.createTable(dynamicSchema as Schema, "postgres");
-  if (DEBUG) console.debug(`\nPostgres\n${HR}\n${dddl}\n\n`);
+  // console.debug(`\nPostgres\n${HR}\n${dddl}\n\n`);
   assertEquals(dddl.trim(), POSTGRES);
 });
 
