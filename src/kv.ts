@@ -1,5 +1,8 @@
+import { hub } from "hub";
 import type { Class, Filter, Identifiable, Schema, Where } from "./types.ts";
 import { Repository } from "./repository.ts";
+
+const log = hub("dbx:kv");
 
 const META = false;
 const kv = await Deno.openKv();
@@ -61,7 +64,7 @@ export class KV<T extends Identifiable> extends Repository<T> {
 
   override async count(where?: Where<T>, debug?: boolean): Promise<number> {
     if (where) throw new Error("Method not implemented.");
-    if (debug) console.debug({ method: "count", key: [] });
+    if (debug) log.debug({ method: "count", key: [] });
     let count = 0;
     const key = [this.type.name];
     const entries = this.#list(key);
@@ -72,14 +75,14 @@ export class KV<T extends Identifiable> extends Repository<T> {
   // https://docs.deno.com/kv/manual/operations#delete
   override async delete<T>(where?: Where<T>, debug?: boolean): Promise<number> {
     if (where) throw new Error("Method not implemented.");
-    if (debug) console.debug({ method: "delete", key: [] });
+    if (debug) log.debug({ method: "delete", key: [] });
     return (await this.#deleteMany())?.length ?? 0;
   }
 
   // https://docs.deno.com/kv/manual/operations#delete
   override async deleteById(id: number | string, debug?: boolean, check = true): Promise<boolean> {
     const key = [this.type.name, id];
-    if (debug) console.debug({ method: "deleteById", key });
+    if (debug) log.debug({ method: "deleteById", key });
     const value = await this.#delete(key, check);
     return value !== undefined;
   }
@@ -90,7 +93,7 @@ export class KV<T extends Identifiable> extends Repository<T> {
     const key = [this.type.name];
     const entries = this.#list(key);
     const values: T[] = [];
-    if (debug) console.debug({ method: "find", key });
+    if (debug) log.debug({ method: "find", key });
     for await (const e of entries) {
       values.push(this.#build(e.value as Partial<T>));
     }
@@ -100,7 +103,7 @@ export class KV<T extends Identifiable> extends Repository<T> {
   // https://docs.deno.com/kv/manual/operations#get
   override async findById(id: number | string, debug?: boolean): Promise<T | undefined> {
     const key = [this.type.name, id];
-    if (debug) console.debug({ method: "findById", key });
+    if (debug) log.debug({ method: "findById", key });
     const entry = await kv.get<T>(key);
     return entry && entry.value ? this.#build(entry.value) : undefined;
   }
@@ -120,7 +123,7 @@ export class KV<T extends Identifiable> extends Repository<T> {
     }
     if (!object.id) object.id = await this.#auto();
     if (META) object = Object.assign(object, { inserted: new Date(), updated: new Date() }) as T;
-    if (debug) console.debug({ method: "insert", key, object });
+    if (debug) log.debug({ method: "insert", key, object });
     await kv.set(key, object);
     return object;
   }
@@ -129,14 +132,14 @@ export class KV<T extends Identifiable> extends Repository<T> {
   override update(object: Partial<T>, debug?: boolean): Promise<T | undefined> {
     // deno-lint-ignore no-explicit-any
     const key = [this.type.name, ...this.keys.map((k) => (object as any)[k] as string)];
-    if (debug) console.debug({ method: "update", key, object });
+    if (debug) log.debug({ method: "update", key, object });
     return this.#update(key, object);
   }
 
   // https://docs.deno.com/kv/manual/operations#set
   override updateById(id: number | string, object: Partial<T>, debug = false): Promise<T | undefined> {
     const key = [this.type.name, id];
-    if (debug) console.debug({ method: "updateById", key, object });
+    if (debug) log.debug({ method: "updateById", key, object });
     return this.#update(key, object);
   }
 }

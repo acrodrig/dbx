@@ -28,7 +28,7 @@ export async function dbInit(type: string, schemas?: Schema[]) {
 export async function dbExec(sql: string) {
   for (const expr of sql.split(";")) {
     if (expr.trim().length === 0) continue;
-    await DB.execute(expr, undefined, false);
+    await DB.execute(expr, undefined);
   }
 }
 

@@ -1,3 +1,4 @@
+import { existsSync } from "@std/fs";
 import { eTag } from "@std/http/etag";
 import type { Column, Constraint, Index, Relation, Schema } from "./types.ts";
 import DB from "./db.ts";
@@ -33,6 +34,20 @@ export class DDL {
   static defaultWidth = 128;
   static textWidth = 2048;
 
+  static async ensureSchemas(schemasFile: string, classFiles: Record<string, string>, base = "", enhance = false): Promise<Record<string, Schema>> {
+    const sfn = base + schemasFile;
+
+    // Try reading schemas from file
+    let schemas = existsSync(schemasFile) ? (await import(sfn)).default : undefined;
+    const outdated = !schemas ? true : await DDL.#outdatedSchemas(schemas, base);
+    if (!outdated) return schemas;
+
+    // Generate and save
+    schemas = await DDL.generateSchemas(classFiles, base, enhance);
+    await Deno.writeTextFile(sfn, JSON.stringify(schemas, null, 2));
+    return schemas;
+  }
+
   static async generateSchemas(classFiles: Record<string, string>, base?: string, enhance = false): Promise<Record<string, Schema>> {
     const TJS = (await import("npm:typescript-json-schema")).default;
 
@@ -44,7 +59,7 @@ export class DDL {
     // Get current set of schemas and find out which ones are outdated
     const schemas = {} as Record<string, Schema>;
 
-    // Run schema generation (only if needed)
+    // Run schema generation
     const program = TJS.getProgramFromFiles(Object.values(classFiles), compilerOptions, base);
     for (const [c, f] of Object.entries(classFiles)) {
       const etag = await eTag(await Deno.stat(f));
@@ -83,6 +98,14 @@ export class DDL {
       if (typeof c.index === "string") c.index = (c.index ? c.index : n).split(",").map((s) => s.trim());
     });
     return schema;
+  }
+
+  static async #outdatedSchemas(schemas: Record<string, Schema> | Schema[], base = "") {
+    for (const schema of Array.isArray(schemas) ? schemas : Object.values(schemas)) {
+      const outdated = await DDL.#outdatedSchema(schema, base);
+      if (outdated) return true;
+    }
+    return false;
   }
 
   /**

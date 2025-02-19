@@ -1,7 +1,6 @@
 {
   "version": "4",
   "specifiers": {
-    "jsr:@acr/hub@0": "0.1.19",
     "jsr:@db/sqlite@0": "0.12.0",
     "jsr:@denosaurs/plug@1": "1.0.6",
     "jsr:@dewars/postgres@0": "0.20.0",
@@ -18,12 +17,14 @@
     "jsr:@std/fmt@0.221": "0.221.0",
     "jsr:@std/fmt@1": "1.0.5",
     "jsr:@std/fs@0.221": "0.221.0",
+    "jsr:@std/fs@1": "1.0.13",
     "jsr:@std/http@1": "1.0.9",
     "jsr:@std/internal@^1.0.5": "1.0.5",
     "jsr:@std/io@~0.224.4": "0.224.9",
     "jsr:@std/path@0.217": "0.217.0",
     "jsr:@std/path@0.221": "0.221.0",
     "jsr:@std/path@^1.0.2": "1.0.8",
+    "jsr:@std/path@^1.0.8": "1.0.8",
     "npm:@types/json-schema@*": "7.0.15",
     "npm:@types/node@*": "22.5.4",
     "npm:mysql2@3": "3.11.4",
@@ -31,12 +32,6 @@
     "npm:typescript-json-schema@0.65.1": "0.65.1_@types+node@22.5.4_typescript@5.5.4"
   },
   "jsr": {
-    "@acr/hub@0.1.19": {
-      "integrity": "35fe25438d9e6c66960ec81317d72f957e5a48fd9036cda16a9f3145fc521e8c",
-      "dependencies": [
-        "jsr:@std/fmt@1"
-      ]
-    },
     "@db/sqlite@0.12.0": {
       "integrity": "dd1ef7f621ad50fc1e073a1c3609c4470bd51edc0994139c5bf9851de7a6d85f",
       "dependencies": [
@@ -49,7 +44,7 @@
       "dependencies": [
         "jsr:@std/encoding@0.221",
         "jsr:@std/fmt@0.221",
-        "jsr:@std/fs",
+        "jsr:@std/fs@0.221",
         "jsr:@std/path@0.221"
       ]
     },
@@ -121,6 +116,12 @@
       "dependencies": [
         "jsr:@std/assert@0.221",
         "jsr:@std/path@0.221"
+      ]
+    },
+    "@std/fs@1.0.13": {
+      "integrity": "756d3ff0ade91c9e72b228e8012b6ff00c3d4a4ac9c642c4dac083536bf6c605",
+      "dependencies": [
+        "jsr:@std/path@^1.0.8"
       ]
     },
     "@std/http@1.0.9": {
@@ -487,12 +488,12 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@acr/hub@0",
       "jsr:@std/assert@1",
       "jsr:@std/async@1",
       "jsr:@std/cache@0",
       "jsr:@std/collections@1",
       "jsr:@std/fmt@1",
+      "jsr:@std/fs@1",
       "jsr:@std/http@1"
     ]
   }

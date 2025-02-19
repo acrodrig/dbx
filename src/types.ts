@@ -1,4 +1,3 @@
-// Copied from base util.ts which are copied from type-fest
 export type Primitive = bigint | boolean | Date | null | number | string | Uint8Array;
 export type Parameter = Primitive | Primitive[];
 
@@ -110,4 +109,25 @@ export interface Filter<T> {
   order?: Order<T>;
   limit?: number;
   offset?: number;
+}
+
+export interface Client {
+  config: ClientConfig;
+  close(): Promise<void>;
+  execute(sql: string, parameters?: Parameter[]): Promise<{ affectedRows?: number; lastInsertId?: number }>;
+  query(sql: string, parameters?: Parameter[]): Promise<Row[]>;
+}
+
+export interface ClientConfig {
+  type: string;
+  charset?: string;
+  database?: string;
+  hostname?: string;
+  idleTimeout?: number;
+  password?: string;
+  poolSize?: number;
+  port?: number;
+  socketPath?: string;
+  username?: string;
+  timeout?: number;
 }

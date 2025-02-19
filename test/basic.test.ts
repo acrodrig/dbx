@@ -134,6 +134,12 @@ Deno.test("Constraint(s)", options, async function () {
   hub(true);
 });
 
+Deno.test("Errors", options, async function () {
+  hub(false);
+  await assertRejects(() => DB.query("SELECT 1 AND 1 FROM foo", {}), Error, "no such table");
+  hub(true);
+});
+
 Deno.test("Clean", options, async function () {
   const ok = await repo.deleteById(id);
   assert(ok);

@@ -21,8 +21,8 @@ try {
   const data = await DB.query(sql);
   if (data.length === 0) await dbExec(DATA);
 } catch (ex) {
-  console.error(ex);
   console.error("\n❌ Cannot execute SQL initialization in on target DB '" + getProvider() + "'\n");
+  console.trace(ex);
   Deno.exit(1);
 }
 

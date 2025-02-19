@@ -1,14 +1,11 @@
 import { blue, bold, white } from "@std/fmt/colors";
 import { hub } from "hub";
+import { connect } from "./client.ts";
 import { DDL } from "./ddl.ts";
-import type { Class, Identifiable, Parameter, Row, Schema } from "./types.ts";
+import type { Class, Client, ClientConfig, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
 
 const log = hub("dbx"), sqlLog = hub("dbx:sql");
-
-// Import Driver Types
-import type { Database as SQLite } from "jsr:@db/sqlite@0";
-import type { Client as Postgres } from "jsr:@dewars/postgres@0";
 
 // See https://stackoverflow.com/questions/49285864/is-there-a-valueof-similar-to-keyof-in-typescript
 type Values<T> = T[keyof T];
@@ -34,116 +31,6 @@ const Provider = {
 } as const;
 type Provider = Values<typeof Provider>;
 
-export interface Client {
-  config: ClientConfig;
-  close(): Promise<void>;
-  execute(sql: string, parameters?: Parameter[], debug?: boolean): Promise<{ affectedRows?: number; lastInsertId?: number }>;
-  query(sql: string, parameters?: Parameter[], debug?: boolean): Promise<Row[]>;
-}
-
-export interface ClientConfig {
-  type: string;
-  charset?: string;
-  database?: string;
-  debug?: boolean;
-  hostname?: string;
-  idleTimeout?: number;
-  password?: string;
-  poolSize?: number;
-  port?: number;
-  socketPath?: string;
-  username?: string;
-  timeout?: number;
-}
-
-async function connect(config: ClientConfig): Promise<Client> {
-  // Make sure we have a valid configuration
-  config = Object.assign({
-    hostname: Deno.env.get("DB_HOST") ?? "127.0.0.1",
-    port: Number(Deno.env.get("DB_PORT")) || 3306,
-    username: Deno.env.get("DB_USER") ?? "primary",
-    password: Deno.env.get("DB_PASS"),
-  }, config);
-
-  // Cleans parameters of temporal values
-  const isTemporal = (p: unknown) => p && ["PlainDate", "PlainDateTime", "PlainTime"].includes(p?.constructor?.name);
-  const cleanTemporals = (parameters: Parameter[] | undefined) => parameters?.map((p) => isTemporal(p) ? p!.toString() : p);
-
-  // MySQL
-  if (config.type === Provider.MYSQL) {
-    const mysql = await import("npm:mysql2@^3/promise");
-    const nativeClient = await mysql.createConnection({
-      host: config.hostname ?? "127.0.0.1",
-      database: config.database,
-      user: config.username,
-      password: config.password,
-      charset: "utf8mb4",
-    });
-    return new class implements Client {
-      config = config;
-      close() {
-        return nativeClient.end();
-      }
-      async execute(sql: string, parameters?: Parameter[]) {
-        // deno-lint-ignore no-explicit-any
-        const [rsh] = await (nativeClient as any).execute(sql, cleanTemporals(parameters));
-        // deno-lint-ignore no-explicit-any
-        return { affectedRows: (rsh as any).affectedRows, lastInsertId: (rsh as any).insertId };
-      }
-      async query(sql: string, parameters?: Parameter[]) {
-        // deno-lint-ignore no-explicit-any
-        const [rows] = await (nativeClient as any).query(sql, cleanTemporals(parameters));
-        return rows as Row[];
-      }
-    }();
-  }
-
-  // Postgres
-  if (config.type === Provider.POSTGRES) {
-    const postgres = await import("jsr:@dewars/postgres@0");
-    config = Object.assign(config, { user: config.username });
-    const nativeClient = await new postgres.Pool(config, config.poolSize ?? 1).connect() as Postgres;
-    return new class implements Client {
-      config = config;
-      close() {
-        return nativeClient.end();
-      }
-      async execute(sql: string, parameters?: Parameter[]) {
-        const qar = await nativeClient.queryArray(sql, cleanTemporals(parameters));
-        return { affectedRows: qar.rowCount, lastInsertId: qar.rows[0]?.[0] as number ?? undefined };
-      }
-      async query(sql: string, parameters?: Parameter[]) {
-        const qor = await nativeClient.queryObject(sql, cleanTemporals(parameters));
-        return qor.rows as Row[];
-      }
-    }();
-  }
-
-  // Sqlite
-  if (config.type === Provider.SQLITE) {
-    const sqlite = await import("jsr:@db/sqlite@0");
-    const nativeClient = new sqlite.Database(config.database ?? Deno.env.get("DB_FILE") ?? ":memory:") as SQLite;
-
-    // Add regex function
-    nativeClient.function("regexp", (str: string, re: string): boolean => new RegExp(re).exec(str) !== null);
-
-    return new class implements Client {
-      config = config;
-      close() {
-        return Promise.resolve(nativeClient.close());
-      }
-      execute(sql: string, parameters?: Parameter[]) {
-        nativeClient.exec(sql, cleanTemporals(parameters));
-        return Promise.resolve({ affectedRows: nativeClient.changes, lastInsertId: nativeClient.lastInsertRowId });
-      }
-      query(sql: string, parameters?: Parameter[]) {
-        return Promise.resolve(nativeClient.prepare(sql).all(cleanTemporals(parameters)));
-      }
-    }();
-  }
-  throw new Error("Unknown Database Type '" + config.type + "'");
-}
-
 export class DB {
   static Hook = Hook;
   static Provider = Provider;
@@ -157,21 +44,17 @@ export class DB {
     return sql.replaceAll(" ORDER BY NULL", "");
   };
 
-  static async connect(config: ClientConfig, schemas?: Schema[], ensure = false): Promise<Client> {
+  static async connect(config: ClientConfig, schemas: Schema[] | Record<string, Schema> = [], ensure = false): Promise<Client> {
     DB.#schemas.clear();
     // Iterate over the schemas and map them by name and type if it exists
-    schemas?.forEach((s) => {
+    if (!Array.isArray(schemas)) schemas = Object.values(schemas as Record<string, Schema>);
+    schemas.forEach((s) => {
       DB.#schemas.set(s.table!, s);
       if (s.type) DB.#schemas.set(s.type, s);
     });
     if (DB.client) return Promise.resolve(DB.client);
     DB.type = config.type;
     DB.client = await connect(config);
-
-    // Should wrap in debugger?
-    // Deprecating behavior.
-    // const debug = Deno.env.get("DEBUG")?.includes("dbx") || config.debug || false;
-    // if (debug) DB.client = new DebugClient(DB.client);
 
     // Ensure connection?
     if (ensure) await DB.ensure();
@@ -193,8 +76,8 @@ export class DB {
       if (sum === 2) return url;
     } catch (ex) {
       const message = "❌ Could not connect to DB '" + url + "', review DB configuration";
-      if (!safe) new Error(message);
-      else console.error(message, ex);
+      if (!safe) throw new Error(message);
+      else log.error(message, ex);
     }
   }
 
@@ -230,21 +113,21 @@ export class DB {
     sqlLog.debug(sql.trim() + "  " + bold(white(time)));
   }
 
-  static async query(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug?: boolean): Promise<Row[]> {
+  static async query(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }): Promise<Row[]> {
     // If values are not an array, they need to be transformed (as well as the SQL)
     const arrayParameters: Parameter[] = [];
     if (parameters && !Array.isArray(parameters)) {
       sql = DB._transformParameters(sql, parameters, arrayParameters);
       parameters = arrayParameters;
     }
-    if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
-    if (debug) console.debug({ method: "query", sql: clean(sql), parameters });
+    log.debug({ method: "query", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
     try {
       const start = Date.now();
-      const result = await DB.client.query(DB._sqlFilter(sql), parameters, debug);
+      if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
+      const result = await DB.client.query(DB._sqlFilter(sql), parameters);
       this._logSql(sql, parameters ?? [], result.length ?? 0, start);
       return result;
     } catch (ex) {
@@ -254,21 +137,21 @@ export class DB {
     }
   }
 
-  static async execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }, debug?: boolean): Promise<{ affectedRows?: number; lastInsertId?: number }> {
+  static async execute(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }): Promise<{ affectedRows?: number; lastInsertId?: number }> {
     // If values are not an array, they need to be transformed (as well as the SQL)
     const arrayParameters: Parameter[] = [];
     if (parameters && !Array.isArray(parameters)) {
       sql = DB._transformParameters(sql, parameters, arrayParameters);
       parameters = arrayParameters;
     }
-    if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
 
-    if (debug) console.debug({ method: "execute", sql: clean(sql), parameters });
+    log.debug({ method: "execute", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
     try {
       const start = Date.now();
-      const result = await DB.client.execute(DB._sqlFilter(sql), parameters, debug);
+      if (DB.type === Provider.POSTGRES) sql = DB._transformPlaceholders(sql);
+      const result = await DB.client.execute(DB._sqlFilter(sql), parameters);
       this._logSql(sql, parameters ?? [], result.affectedRows ?? 0, start);
       return result;
     } catch (ex) {
@@ -279,13 +162,10 @@ export class DB {
   }
 
   // Uses the most standard MySQL syntax, modifies for other DBs inflight
-  static createTable(schema: Schema, type: DB.Provider, execute: false, nameOverride?: string): Promise<string>;
-  static createTable(schema: Schema, type: DB.Provider, execute: true, nameOverride?: string): Promise<boolean>;
-  static async createTable(schema: Schema, type: DB.Provider, execute = true, nameOverride?: string): Promise<string | boolean> {
+  static async createTable(schema: Schema, type: DB.Provider, execute = true, nameOverride?: string): Promise<string> {
     const sql = DDL.createTable(schema, type, nameOverride);
-    if (!execute) return Promise.resolve(sql);
-    await DB.execute(sql);
-    return true;
+    if (execute) await DB.execute(sql);
+    return sql;
   }
 
   // Repository cache

@@ -5,6 +5,14 @@ import type { Class, Condition, Filter, Identifiable, Order, Primitive, Schema, 
 
 const log = hub("dbx");
 
+// Syntactic Sugar to allow for forced debug
+export function forcedDebug(debug: boolean | undefined, ...args: unknown[]): void {
+  const level = log.level;
+  if (debug) log.level = "debug";
+  log.debug(args);
+  if (debug) log.level = level;
+}
+
 // Syntactic Sugar
 function join(label: string, count: number, separator = ","): string {
   return new Array(count).fill(label).join(separator);
@@ -66,7 +74,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const whereTree: Primitive[] = [];
     const sql = `SELECT * FROM ${this.table} WHERE ${Repository._where(this.baseWhere, whereTree)}`;
     const parameters = whereTree;
-    if (debug) console.debug({ method: "all", sql: clean(sql), parameters });
+    forcedDebug(debug, { method: "all", sql: clean(sql), parameters });
     const records = await DB.query(sql, parameters);
     return records.map((r: Record<string, unknown>) => this.fromRecord(r, new this.type()));
   }
@@ -84,7 +92,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const parameters = [...whereTree];
     const sql = `SELECT COUNT(1) AS count FROM ${this.table} WHERE ${_where}`;
 
-    if (debug) console.debug({ method: "count", sql: clean(sql), parameters });
+    forcedDebug(debug, { method: "count", sql: clean(sql), parameters });
 
     // Run query
     const records = await DB.query(sql, parameters);
@@ -101,7 +109,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const whereTree: Primitive[] = [];
     const sql = `DELETE FROM ${this.table} WHERE ${Repository._where({ ...where, ...this.baseWhere }, whereTree)}`;
     const parameters = whereTree;
-    if (debug) console.debug({ method: "delete", sql: clean(sql), parameters });
+    forcedDebug(debug, { method: "delete", sql: clean(sql), parameters });
     const result = await DB.execute(sql, parameters);
     return result.affectedRows ?? -1;
   }
@@ -113,7 +121,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const whereTree: Primitive[] = [];
     const sql = `DELETE FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
     const parameters = [id, ...whereTree];
-    if (debug) console.debug({ method: "delete", sql: clean(sql), parameters });
+    forcedDebug(debug, { method: "delete", sql: clean(sql), parameters });
     this.dispatchEvent(new CustomEvent(Hook.BEFORE_DELETE, { detail: { id } }));
     const result = await DB.execute(sql, parameters);
     this.dispatchEvent(new CustomEvent(Hook.AFTER_DELETE, { detail: { id } }));
@@ -148,7 +156,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const parameters = [...whereTree, limit, offset];
     const sql = `SELECT ${_select} FROM ${this.table} WHERE ${_where} ORDER BY ${_order} LIMIT ? OFFSET ?`;
 
-    if (debug) console.debug({ method: "find", sql: clean(sql), parameters });
+    forcedDebug(debug, { method: "find", sql: clean(sql), parameters });
 
     // Run query
     const records = await DB.query(sql, parameters);
@@ -160,7 +168,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const whereTree: Primitive[] = [];
     const sql = `SELECT * FROM ${this.table} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
     const parameters = [id, ...whereTree];
-    if (debug) console.debug({ method: "findById", sql: clean(sql), parameters });
+    forcedDebug(debug, { method: "findById", sql: clean(sql), parameters });
     const records = await DB.query(sql, parameters);
     const record = records.pop();
     if (!record) return undefined;
@@ -183,7 +191,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const columns = names.map((name) => "" + CQ + name + CQ + "").join(",");
     const sql = `INSERT INTO ${this.table} (${columns}) VALUES (${join("?", names.length)})${DB.type === DB.Provider.POSTGRES ? " RETURNING id" : ""}`;
     const parameters = [...values];
-    if (debug) console.debug({ method: "insert", sql: clean(sql), parameters });
+    forcedDebug(debug, { method: "insert", sql: clean(sql), parameters });
     this.dispatchEvent(new CustomEvent(Hook.BEFORE_INSERT, { detail: object }));
     const result = await DB.execute(sql, parameters as Primitive[]);
     if (!result.lastInsertId) log.warn({ method: "insert", sql: clean(sql), warning: "Insert did produce a last inserted ID" });
@@ -203,7 +211,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const columns = Object.keys(record).map((name) => "" + CQ + name + CQ + "=?").join(",");
     const sql = `UPDATE ${this.table} SET ${columns} WHERE id = ? AND ${Repository._where(this.baseWhere, whereTree)}`;
     const parameters = [...Object.values(record), object.id, ...whereTree];
-    if (debug) console.debug({ method: "update", sql: clean(sql), parameters });
+    forcedDebug(debug, { method: "update", sql: clean(sql), parameters });
     this.dispatchEvent(new CustomEvent(Hook.BEFORE_UPDATE, { detail: object }));
     const result = await DB.execute(sql, parameters as Primitive[]);
     if (result.lastInsertId) object.id = result.lastInsertId;
