@@ -18,7 +18,7 @@
     "@std/fmt": "jsr:@std/fmt@^1",
     "@std/fs": "jsr:@std/fs@^1",
     "@std/http": "jsr:@std/http@^1",
-    "hub": "../../AC/hub/mod.ts"
+    "hub": "jsr:@acr/hub@^0"
   },
   "tasks": {
     "check": "deno check **/*.ts && deno lint && deno fmt --check",

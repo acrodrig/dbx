@@ -1,6 +1,7 @@
 {
   "version": "4",
   "specifiers": {
+    "jsr:@acr/hub@0": "0.1.19",
     "jsr:@db/sqlite@0": "0.12.0",
     "jsr:@denosaurs/plug@1": "1.0.6",
     "jsr:@dewars/postgres@0": "0.20.0",
@@ -32,6 +33,12 @@
     "npm:typescript-json-schema@0.65.1": "0.65.1_@types+node@22.5.4_typescript@5.5.4"
   },
   "jsr": {
+    "@acr/hub@0.1.19": {
+      "integrity": "35fe25438d9e6c66960ec81317d72f957e5a48fd9036cda16a9f3145fc521e8c",
+      "dependencies": [
+        "jsr:@std/fmt@1"
+      ]
+    },
     "@db/sqlite@0.12.0": {
       "integrity": "dd1ef7f621ad50fc1e073a1c3609c4470bd51edc0994139c5bf9851de7a6d85f",
       "dependencies": [
@@ -488,6 +495,7 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@acr/hub@0",
       "jsr:@std/assert@1",
       "jsr:@std/async@1",
       "jsr:@std/cache@0",
