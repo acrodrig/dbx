@@ -49,7 +49,7 @@ export class DDL {
   }
 
   static async generateSchemas(classFiles: Record<string, string>, base?: string, enhance = false): Promise<Record<string, Schema>> {
-    const TJS = (await import("npm:typescript-json-schema")).default;
+    const TJS = (await import("npm:typescript-json-schema@0.65.1")).default;
 
     // Parameters for TypeScript JSON Schema
     const validationKeywords = ["as", "constraint", "dateOn", "fullText", "index", "primaryKey", "relations", "unique", "table"];
