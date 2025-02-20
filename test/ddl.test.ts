@@ -19,7 +19,7 @@ const classFiles = { "Account": "resources/account.ts" };
 
 // Track bug https://github.com/denoland/deno/issues/28206
 // const { Account: dynamicSchema } = await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
-const dynamicSchemas = CI ? { } : await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
+const dynamicSchemas = CI ? {} : await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
 const dynamicSchema = dynamicSchemas.Account;
 
 const SQLITE = `
