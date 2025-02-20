@@ -1,6 +1,7 @@
 #!/usr/bin/env -S deno test -A --no-check
 
 import { assertEquals, assertExists, assertNotEquals } from "@std/assert";
+import { delay } from "@std/async";
 import { DDL } from "../src/ddl.ts";
 import type { Schema } from "../src/types.ts";
 import { createTables, dbInit, getProvider } from "./helpers.ts";
@@ -148,6 +149,9 @@ Deno.test("Actual Table", async function () {
 
 // Execute the table creation on the provided platform
 Deno.test("Schema Generation", async function () {
+  // Wait until the top of the second so that it runs within the same second
+  await delay(1000 - (new Date()).getMilliseconds());
+
   // Generate two schemas in a row, they should be identical
   const first = await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
   assertExists(first);
