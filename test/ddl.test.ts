@@ -8,6 +8,7 @@ import { createTables, dbInit, getProvider } from "./helpers.ts";
 
 // See https://github.com/denoland/deno_std/blob/main/testing/_diff_test.ts
 
+const CI = Deno.env.has("CI");
 const DB = await dbInit(getProvider());
 
 // Import the static schema from the JSON file
@@ -15,7 +16,11 @@ import staticSchema from "../resources/account.json" with { type: "json" };
 
 // Generate dynamic schema to make sure it's the same result
 const classFiles = { "Account": "resources/account.ts" };
-const { Account: dynamicSchema } = await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
+
+// Track bug https://github.com/denoland/deno/issues/28206
+// const { Account: dynamicSchema } = await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
+const dynamicSchemas = CI ? { } : await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
+const dynamicSchema = dynamicSchemas.Account;
 
 const SQLITE = `
 CREATE TABLE IF NOT EXISTS accounts (
@@ -48,6 +53,7 @@ Deno.test("Table Creation SQLite", function () {
   const sddl = DDL.createTable(staticSchema as Schema, "sqlite", "accounts");
   // console.debug(`\nSQLite\n${"-".repeat(80)}\n${sddl}\n\n`);
   assertEquals(sddl.trim(), SQLITE);
+  if (CI) return; // TODO: remove once https://github.com/denoland/deno/issues/28206 is fixed
   const dddl = DDL.createTable(dynamicSchema as Schema, "sqlite", "accounts");
   // console.debug(`\nSQLite\n${"-".repeat(80)}\n${dddl}\n\n`);
   assertEquals(dddl.trim(), SQLITE);
@@ -85,6 +91,7 @@ Deno.test("Table Creation MySQL", function () {
   const sddl = DDL.createTable(staticSchema as Schema, "mysql", "accounts");
   // console.debug(`\nMYSQL\n${"-".repeat(80)}\n${sddl}\n\n`);
   assertEquals(sddl.trim(), MYSQL);
+  if (CI) return; // TODO: remove once https://github.com/denoland/deno/issues/28206 is fixed
   const dddl = DDL.createTable(dynamicSchema as Schema, "mysql", "accounts");
   // console.debug(`\nMYSQL\n${"-".repeat(80)}\n${dddl}\n\n`);
   assertEquals(dddl.trim(), MYSQL);
@@ -122,6 +129,7 @@ Deno.test("Table Creation Postgres", function () {
   const sddl = DDL.createTable(staticSchema as Schema, "postgres");
   // console.debug(`\nPostgres\n${"-".repeat(80)}\n${sddl}\n\n`);
   assertEquals(sddl.trim(), POSTGRES);
+  if (CI) return; // TODO: remove once https://github.com/denoland/deno/issues/28206 is fixed
   const dddl = DDL.createTable(dynamicSchema as Schema, "postgres");
   // console.debug(`\nPostgres\n${"-".repeat(80)}\n${dddl}\n\n`);
   assertEquals(dddl.trim(), POSTGRES);
@@ -149,6 +157,8 @@ Deno.test("Actual Table", async function () {
 
 // Execute the table creation on the provided platform
 Deno.test("Schema Generation", async function () {
+  if (CI) return; // TODO: remove once https://github.com/denoland/deno/issues/28206 is fixed
+
   // Wait until the top of the second so that it runs within the same second
   await delay(1000 - (new Date()).getMilliseconds());
 
