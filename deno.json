@@ -20,6 +20,14 @@
     "@std/http": "jsr:@std/http@^1",
     "hub": "jsr:@acr/hub@^0"
   },
+  "publish": {
+    "include": [
+      "LICENSE",
+      "README.md",
+      "mod.ts",
+      "src/**/*.ts"
+    ]
+  },
   "tasks": {
     "check": "deno check **/*.ts && deno lint && deno fmt --check",
     "lint": "deno lint src test",

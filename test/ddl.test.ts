@@ -11,6 +11,15 @@ import { createTables, dbInit, getProvider } from "./helpers.ts";
 const CI = Deno.env.has("CI");
 const DB = await dbInit(getProvider());
 
+// Generator function is declared here so that it does not go into the published module
+DDL.generator = async function(classFiles: Record<string, string>, base?: string) {
+  const TJS = (await import("npm:typescript-json-schema@0.65.1")).default;
+  const program = TJS.getProgramFromFiles(Object.values(classFiles), DDL.TS_OPTIONS, base);
+  // deno-lint-ignore no-explicit-any
+  const entries = Object.keys(classFiles).map((c) => [c, TJS.generateSchema(program, c, DDL.TJS_OPTIONS as any)]);
+  return Object.fromEntries(entries);
+};
+
 // Import the static schema from the JSON file
 import staticSchema from "../resources/account.json" with { type: "json" };
 

@@ -30,11 +30,35 @@ const _BaseSchema: DB.Schema = {
 };
 
 export class DDL {
+  static EXTENSIONS = ["as", "constraint", "dateOn", "fullText", "index", "primaryKey", "relations", "unique", "table"];
+  static TS_OPTIONS = { lib: ["es2022"], module: "es2022", target: "es2022" };
+  static TJS_OPTIONS = { required: true, ignoreErrors: true, defaultNumberType: "integer", validationKeywords: DDL.EXTENSIONS };
+
   static padWidth = 4;
   static defaultWidth = 128;
   static textWidth = 2048;
 
-  static async ensureSchemas(schemasFile: string, classFiles: Record<string, string>, base = "", enhance = false): Promise<Record<string, Schema>> {
+  /**
+   * Generator function that creates a map of schemas from class files
+   * @param classFiles - a map of class names to file paths
+   * @param base - the base directory where the files are located
+   * @param extensions - additional extensions to be used by the generator
+   * @example
+   *
+   * Below is an example of how to define the generator function using :
+   *
+   * ```ts
+   * DDL.generator = async function(classFiles: Record<string, string>, base?: string) {
+   *   const TJS = (await import("npm:typescript-json-schema@0.65.1")).default;
+   *   const program = TJS.getProgramFromFiles(Object.values(classFiles), DDL.TS_OPTIONS, base);
+   *   const entries = Object.keys(classFiles).map((c) => [c, TJS.generateSchema(program, c, DDL.TJS_OPTIONS)]);
+   *   return Object.fromEntries(entries);
+   * };
+   * ```
+   */
+  static generator: (classFiles: Record<string, string>, base?: string, extensions?: string[]) => Promise<Record<string, Schema>>;
+
+  static async ensureSchemas(schemasFile: string, classFiles: Record<string, string>, base?: string, enhance = false): Promise<Record<string, Schema>> {
     const sfn = base + schemasFile;
 
     // Try reading schemas from file
@@ -48,23 +72,15 @@ export class DDL {
     return schemas;
   }
 
-  static async generateSchemas(classFiles: Record<string, string>, base?: string, enhance = false): Promise<Record<string, Schema>> {
-    const TJS = (await import("npm:typescript-json-schema@0.65.1")).default;
+  static async generateSchemas(classFiles: Record<string, string>, base?: string, enhance?: boolean): Promise<Record<string, Schema>> {
+    // If DDL has no generator, throw an error
+    if (!DDL.generator) throw new Error("DDL.generator must be set to a function that generates schemas from class files");
 
-    // Parameters for TypeScript JSON Schema
-    const validationKeywords = ["as", "constraint", "dateOn", "fullText", "index", "primaryKey", "relations", "unique", "table"];
-    const settings = { required: true, ignoreErrors: true, defaultNumberType: "integer", validationKeywords };
-    const compilerOptions = { lib: ["es2022"], module: "es2022", target: "es2022" };
-
-    // Get current set of schemas and find out which ones are outdated
-    const schemas = {} as Record<string, Schema>;
-
-    // Run schema generation
-    const program = TJS.getProgramFromFiles(Object.values(classFiles), compilerOptions, base);
+    // Generate schemas and clean them and enhance them
+    const schemas = await DDL.generator(classFiles, base);
     for (const [c, f] of Object.entries(classFiles)) {
       const etag = await eTag(await Deno.stat(f));
-      // deno-lint-ignore no-explicit-any
-      schemas[c] = DDL.#cleanSchema(TJS.generateSchema(program, c, settings as any) as Schema, c, undefined, "file://./" + f, etag);
+      schemas[c] = DDL.#cleanSchema(schemas[c], c, undefined, "file://./" + f, etag);
       if (enhance) schemas[c] = DDL.enhanceSchema(schemas[c]);
     }
 
