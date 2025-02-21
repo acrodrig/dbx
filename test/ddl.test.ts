@@ -12,7 +12,7 @@ const CI = Deno.env.has("CI");
 const DB = await dbInit(getProvider());
 
 // Generator function is declared here so that it does not go into the published module
-DDL.generator = async function(classFiles: Record<string, string>, base?: string) {
+DDL.generator = async function (classFiles: Record<string, string>, base?: string) {
   const TJS = (await import("npm:typescript-json-schema@0.65.1")).default;
   const program = TJS.getProgramFromFiles(Object.values(classFiles), DDL.TS_OPTIONS, base);
   // deno-lint-ignore no-explicit-any
