@@ -1,4 +1,3 @@
-import { existsSync } from "@std/fs";
 import { eTag } from "@std/http/etag";
 import type { Column, Constraint, Index, Relation, Schema } from "./types.ts";
 import DB from "./db.ts";
@@ -58,17 +57,19 @@ export class DDL {
    */
   static generator: (classFiles: Record<string, string>, base?: string, extensions?: string[]) => Promise<Record<string, Schema>>;
 
-  static async ensureSchemas(schemasFile: string, classFiles: Record<string, string>, base?: string, enhance = false): Promise<Record<string, Schema>> {
-    const sfn = base + schemasFile;
-
-    // Try reading schemas from file
-    let schemas = existsSync(schemasFile) ? (await import(sfn)).default : undefined;
-    const outdated = !schemas ? true : await DDL.#outdatedSchemas(schemas, base);
+  static async ensureSchemas(
+    schemas: Record<string, Schema>,
+    classFiles: Record<string, string>,
+    base?: string,
+    enhance = false,
+    schemasFile?: string,
+  ): Promise<Record<string, Schema>> {
+    const outdated = !schemas ? true : await DDL.outdatedSchemas(schemas, base);
     if (!outdated) return schemas;
 
     // Generate and save
     schemas = await DDL.generateSchemas(classFiles, base, enhance);
-    await Deno.writeTextFile(sfn, JSON.stringify(schemas, null, 2));
+    if (schemasFile) await Deno.writeTextFile(schemasFile, JSON.stringify(schemas, null, 2));
     return schemas;
   }
 
@@ -116,9 +117,9 @@ export class DDL {
     return schema;
   }
 
-  static async #outdatedSchemas(schemas: Record<string, Schema> | Schema[], base = "") {
+  static async outdatedSchemas(schemas: Record<string, Schema> | Schema[], base = ""): Promise<boolean> {
     for (const schema of Array.isArray(schemas) ? schemas : Object.values(schemas)) {
-      const outdated = await DDL.#outdatedSchema(schema, base);
+      const outdated = await DDL.outdatedSchema(schema, base);
       if (outdated) return true;
     }
     return false;
@@ -130,7 +131,7 @@ export class DDL {
    * @param schema - the schema to check
    * @param base - the directory where the schema file is located
    */
-  static async #outdatedSchema(schema: Schema, base = "") {
+  static async outdatedSchema(schema: Schema, base = ""): Promise<boolean> {
     if (!schema.$id) throw new Error("Schema must have an '$id' property to test if it is outdated");
 
     // Get file and schema create date from $id

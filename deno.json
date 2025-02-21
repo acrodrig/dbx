@@ -1,6 +1,5 @@
 {
   "name": "@acr/dbx",
-  "version": "0.9.1",
   "license": "MIT",
   "exports": "./mod.ts",
   "fmt": {
