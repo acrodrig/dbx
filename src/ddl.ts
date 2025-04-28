@@ -64,8 +64,8 @@ export class DDL {
     enhance = false,
     schemasFile?: string,
   ): Promise<Record<string, Schema>> {
-    const outdated = !schemas ? true : await DDL.outdatedSchemas(schemas, base);
-    if (!outdated) return schemas;
+    const outdated = !schemas ? undefined : await DDL.outdatedSchemas(schemas, base);
+    if (!outdated || outdated.length > 0) return schemas;
 
     // Generate and save
     schemas = await DDL.generateSchemas(classFiles, base, enhance);
@@ -73,6 +73,14 @@ export class DDL {
     return schemas;
   }
 
+  /**
+   * Generate schemas from class files
+   *
+   * @param classFiles - a map of class names to file paths
+   * @param base - the base directory where the files are located, needed for relative URLs in schema
+   * @param enhance - if true schemas will be enhanced with standard properties
+   * @returns a map of class names to schemas
+   */
   static async generateSchemas(classFiles: Record<string, string>, base?: string, enhance?: boolean): Promise<Record<string, Schema>> {
     // If DDL has no generator, throw an error
     if (!DDL.generator) throw new Error("DDL.generator must be set to a function that generates schemas from class files");
@@ -117,12 +125,13 @@ export class DDL {
     return schema;
   }
 
-  static async outdatedSchemas(schemas: Record<string, Schema> | Schema[], base = ""): Promise<boolean> {
-    for (const schema of Array.isArray(schemas) ? schemas : Object.values(schemas)) {
-      const outdated = await DDL.outdatedSchema(schema, base);
-      if (outdated) return true;
+  static async outdatedSchemas(schemas: Record<string, Schema>, base = ""): Promise<string[]> {
+    const outdated: string[] = [];
+    for (const [c, s] of Object.entries(schemas)) {
+      if (!(await DDL.outdatedSchema(s, base))) continue;
+      outdated.push(c);
     }
-    return false;
+    return outdated;
   }
 
   /**
@@ -162,7 +171,7 @@ export class DDL {
   static #defaultValue(column: Column, dbType: string) {
     const cd = column.default;
 
-    // Auto inserted/updated values
+    // Automatically inserted/updated values
     if (column.dateOn === "insert") return "CURRENT_TIMESTAMP";
     if (column.dateOn === "update") return "CURRENT_TIMESTAMP" + ((dbType !== DB.Provider.MYSQL) ? "" : " ON UPDATE CURRENT_TIMESTAMP");
 

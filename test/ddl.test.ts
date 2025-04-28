@@ -2,9 +2,13 @@
 
 import { assertEquals, assertExists, assertNotEquals } from "@std/assert";
 import { delay } from "@std/async";
+import { hub } from "hub";
 import { DDL } from "../src/ddl.ts";
 import type { Schema } from "../src/types.ts";
 import { createTables, dbInit, getProvider } from "./helpers.ts";
+
+// deno-lint-ignore no-global-assign
+console = hub("*", "debug", { fileLine: true });
 
 // See https://github.com/denoland/deno_std/blob/main/testing/_diff_test.ts
 
@@ -24,6 +28,7 @@ DDL.generator = async function (classFiles: Record<string, string>, base?: strin
 import staticSchema from "../resources/account.json" with { type: "json" };
 
 // Generate dynamic schema to make sure it's the same result
+// const classFiles = { "Account": "resources/account.ts", "Point": "resources/point.ts" };
 const classFiles = { "Account": "resources/account.ts" };
 
 // Track bug https://github.com/denoland/deno/issues/28206
@@ -166,8 +171,6 @@ Deno.test("Actual Table", async function () {
 
 // Execute the table creation on the provided platform
 Deno.test("Schema Generation", async function () {
-  if (CI) return; // TODO: remove once https://github.com/denoland/deno/issues/28206 is fixed
-
   // Wait until the top of the second so that it runs within the same second
   await delay(1000 - (new Date()).getMilliseconds());
 
