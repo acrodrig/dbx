@@ -164,7 +164,12 @@ export class DB {
   // Uses the most standard MySQL syntax, modifies for other DBs inflight
   static async createTable(schema: Schema, type: DB.Provider, execute = true, nameOverride?: string): Promise<string> {
     const sql = DDL.createTable(schema, type, nameOverride);
-    if (execute) await DB.execute(sql);
+    if (execute) {
+      const stmts = sql.split(";");
+      for (const stmt of stmts) {
+        if (stmt.trim().length > 0) await DB.execute(stmt);
+      }
+    }
     return sql;
   }
 
