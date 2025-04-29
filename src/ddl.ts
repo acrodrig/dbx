@@ -89,7 +89,8 @@ export class DDL {
     const schemas = await DDL.generator(classFiles, base);
     for (const [c, f] of Object.entries(classFiles)) {
       const etag = await eTag(await Deno.stat(f));
-      schemas[c] = DDL.#cleanSchema(schemas[c], c, undefined, "file://./" + f, etag);
+      const file = f.startsWith("/") ? f : "./" + f;
+      schemas[c] = DDL.#cleanSchema(schemas[c], c, undefined, "file://" + file, etag);
       if (enhance) schemas[c] = DDL.enhanceSchema(schemas[c]);
     }
 
@@ -141,16 +142,19 @@ export class DDL {
    * @param base - the directory where the schema file is located
    */
   static async outdatedSchema(schema: Schema, base = ""): Promise<boolean> {
+    if (!base.startsWith("/")) throw new Error("Base must be absolute within the system");
     if (!schema.$id) throw new Error("Schema must have an '$id' property to test if it is outdated");
 
     // Get file and schema create date from $id
     const url = new URL(schema.$id);
-    const file = (base + url.pathname).replace(/\/\//g, "/");
+    const file = ((schema.$id.startsWith("file://./") ? base : "") + url.pathname).replace(/\/\//g, "/");
     const fileInfo = await Deno.stat(file);
     const schemaDate = url.hash.substring(1);
 
     // First compare dates
-    if (schemaDate > fileInfo.mtime!.toISOString()) return true;
+    const fileDate = fileInfo.mtime!.toISOString().substring(0, 19);
+    // console.log(url.pathname, " --- ", schemaDate, " : ", fileDate, " -> ", schemaDate < fileInfo.mtime!.toISOString());
+    if (schemaDate < fileDate) return true;
 
     // If the date comparison is not enough to tell, then compare etags
     const etag = await eTag(await Deno.stat(file));
