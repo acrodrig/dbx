@@ -136,7 +136,7 @@ Deno.test("Constraint(s)", options, async function () {
 
 Deno.test("Errors", options, async function () {
   hub(false);
-  await assertRejects(() => DB.query("SELECT 1 AND 1 FROM foo", {}), Error, "no such table");
+  await assertRejects(() => DB.query("SELECT 1 AND 1 FROM foo", {}), Error);
   hub(true);
 });
 

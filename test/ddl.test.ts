@@ -8,11 +8,10 @@ import type { Schema } from "../src/types.ts";
 import { createTables, dbInit, getProvider } from "./helpers.ts";
 
 // deno-lint-ignore no-global-assign
-console = hub("*", "debug", { fileLine: true });
+console = hub("*", "debug");
 
 // See https://github.com/denoland/deno_std/blob/main/testing/_diff_test.ts
 
-const CI = Deno.env.has("CI");
 const DB = await dbInit(getProvider());
 const BASE = import.meta.dirname + "/../";
 
@@ -29,11 +28,11 @@ DDL.generator = async function (classFiles: Record<string, string>, base?: strin
 import staticSchema from "../resources/account.json" with { type: "json" };
 
 // Generate dynamic schema to make sure it's the same result
-const classFiles: Record<string, string> = { "Account": "resources/account.ts", "Point": "resources/point.ts" };
+const classFiles: Record<string, string> = { Account: "resources/account.ts" };
 
 // Track bug https://github.com/denoland/deno/issues/28206
 // const { Account: dynamicSchema } = await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
-const dynamicSchemas = CI ? {} : await DDL.generateSchemas(classFiles, import.meta.dirname! + "/../", true);
+const dynamicSchemas = await DDL.generateSchemas(classFiles, BASE, true);
 const dynamicSchema = dynamicSchemas.Account;
 
 const SQLITE = `
@@ -67,7 +66,6 @@ Deno.test("Table Creation SQLite", function () {
   const sddl = DDL.createTable(staticSchema as Schema, "sqlite", "accounts");
   // console.debug(`\nSQLite\n${"-".repeat(80)}\n${sddl}\n\n`);
   assertEquals(sddl.trim(), SQLITE);
-  if (CI) return; // TODO: remove once https://github.com/denoland/deno/issues/28206 is fixed
   const dddl = DDL.createTable(dynamicSchema as Schema, "sqlite", "accounts");
   // console.debug(`\nSQLite\n${"-".repeat(80)}\n${dddl}\n\n`);
   assertEquals(dddl.trim(), SQLITE);
@@ -105,7 +103,6 @@ Deno.test("Table Creation MySQL", function () {
   const sddl = DDL.createTable(staticSchema as Schema, "mysql", "accounts");
   // console.debug(`\nMYSQL\n${"-".repeat(80)}\n${sddl}\n\n`);
   assertEquals(sddl.trim(), MYSQL);
-  if (CI) return; // TODO: remove once https://github.com/denoland/deno/issues/28206 is fixed
   const dddl = DDL.createTable(dynamicSchema as Schema, "mysql", "accounts");
   // console.debug(`\nMYSQL\n${"-".repeat(80)}\n${dddl}\n\n`);
   assertEquals(dddl.trim(), MYSQL);
@@ -143,7 +140,6 @@ Deno.test("Table Creation Postgres", function () {
   const sddl = DDL.createTable(staticSchema as Schema, "postgres");
   // console.debug(`\nPostgres\n${"-".repeat(80)}\n${sddl}\n\n`);
   assertEquals(sddl.trim(), POSTGRES);
-  if (CI) return; // TODO: remove once https://github.com/denoland/deno/issues/28206 is fixed
   const dddl = DDL.createTable(dynamicSchema as Schema, "postgres");
   // console.debug(`\nPostgres\n${"-".repeat(80)}\n${dddl}\n\n`);
   assertEquals(dddl.trim(), POSTGRES);
@@ -183,31 +179,31 @@ Deno.test("Schema Generation", async function () {
 });
 
 // Execute the table creation on the provided platform
-Deno.test.only("Schema Outdated", async function () {
+Deno.test("Schema Outdated", async function () {
   // Generate schemas and save it
   let schemas = await DDL.generateSchemas(classFiles, BASE, true);
   Deno.writeTextFileSync("/tmp/schemas.json", JSON.stringify(schemas, null, 2));
 
-  // Is it outdated from the get-go?
+  // Is it outdated from the get-go? No
   assertEquals(await DDL.outdatedSchemas(schemas, BASE), []);
 
-  // Create other specific classes called Point2D/Point3D and add to schema (with error)
-  Deno.writeTextFileSync("/tmp/point2d.ts", "export default class Point2D { x = 0; y = 0; }");
-  Deno.writeTextFileSync("/tmp/point3d.ts", "export default class Point3D { x = 0; y = 0; }");
-  classFiles["Point2D"] = "/tmp/point2d.ts";
-  classFiles["Point3D"] = "/tmp/point3d.ts";
-  Deno.writeTextFileSync("/tmp/schemas.json", JSON.stringify(await DDL.generateSchemas(classFiles, BASE, true), null, 2));
+  // Create other specific class called Point
+  Deno.writeTextFileSync("/tmp/point.ts", "export default class Point { x = 0; y = 0; }");
+  schemas = await DDL.generateSchemas({ ...classFiles, Point: "/tmp/point.ts" }, BASE, true);
+  Deno.writeTextFileSync("/tmp/schemas.json", JSON.stringify(schemas, null, 2));
+  assertEquals(Object.entries(schemas).length, 2);
 
   // Load the schema with a random query string to force a reload
   schemas = (await import("/tmp/schemas.json?force=" + Date.now(), { with: { type: "json" } })).default as Record<string, Schema>;
+  assertEquals(Object.entries(schemas).length, 2);
   // console.log(JSON.stringify(schemas, null, 2));
 
   // They should not be outdated
   assertEquals(await DDL.outdatedSchemas(schemas, BASE), []);
 
-  // Now correct initial mistake and check again
-  Deno.writeTextFileSync("/tmp/point3d.ts", "export default class Point3D { x = 0; y = 0; z = 0; }");
-  assertEquals(await DDL.outdatedSchemas(schemas, BASE), ["Point3D"]);
+  // Now make the point 3D
+  Deno.writeTextFileSync("/tmp/point.ts", "export default class Point { x = 0; y = 0; z = 0; }");
+  assertEquals(await DDL.outdatedSchemas(schemas, BASE), ["Point"]);
 });
 
 // Execute the table creation on the provided platform
