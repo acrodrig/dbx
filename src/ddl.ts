@@ -112,15 +112,32 @@ export class DDL {
   static #cleanSchema(schema: Schema, type?: string, table?: string, $id?: string, etag?: string): Schema {
     if (type) schema.type = type;
     if (table) schema.table = table;
+
+    // By default the table name is the same as the type name
     if (!schema.table) schema.table = type?.toLowerCase() ?? schema.type?.toLowerCase();
+
+    // Set $id to the file URL of the schema and the date time it was created (as the hash)
     if ($id) schema.$id = $id + ($id.includes("#") ? "" : "#" + new Date().toISOString().substring(0, 19));
+
+    // Generate an etag (based on the file etag)
     if (etag) schema.etag = etag;
+
     if (typeof (schema.fullText) === "string") schema.fullText = (schema.fullText as string).split(",").map((s) => s.trim());
     Object.entries(schema.properties).forEach(([n, c]) => {
+      // If 'description' spans multiple lines, use the first line as the description
+      if (c.description?.includes("\n")) c.description = c.description.split("\n")[0];
+
+      // If there is no type, assume it is a string
       if (!c.type) c.type = "string";
+
+      // Make primary key and uniqye attributes boolean
       if (typeof c.primaryKey === "string") c.primaryKey = true;
       if (typeof c.unique === "string") c.unique = true;
+
+      // Use the format as a way to discover a date type
       if (c.format === "date-time") c.type = "date";
+
+      // Build the index into a proper string array
       if (typeof c.index === "string") c.index = (c.index ? c.index : n).split(",").map((s) => s.trim());
     });
     return schema;
