@@ -215,7 +215,7 @@ export class DDL {
     const primaryKey = column.primaryKey !== undefined;
     const autoIncrement = primaryKey && column.type === "integer";
     const length = column.maxLength! < this.textWidth || type.endsWith("CHAR") ? "(" + (column.maxLength ?? defaultWidth) + ")" : "";
-    const nullable = primaryKey || required ? " NOT NULL" : "";
+    const nullable = primaryKey || required ? " NOT NULL" : "         ";
     const gen = autoIncrement ? serialType[dbType as keyof typeof serialType] : "";
     const expr = column.as && (typeof column.as === "string" ? DB._sqlFilter(column.as) : column.as[dbType]);
     const as = expr ? " GENERATED ALWAYS AS (" + expr + ") STORED" : "";
@@ -228,7 +228,7 @@ export class DDL {
     if (dbType === DB.Provider.POSTGRES && type === "JSON") type = "JSONB";
     if (dbType === DB.Provider.POSTGRES && autoIncrement) type = "SERIAL";
 
-    return `${pad}${name.padEnd(namePad)}${type}${length}${nullable}${as}${dv ? " DEFAULT " + dv : ""}${key}${gen}${comment},\n`;
+    return `${pad}${name.padEnd(namePad)}${(type+length).padEnd(13)}${nullable}${as}${dv ? " DEFAULT " + dv : ""}${key}${gen}${comment},\n`;
   }
 
   // Index generator
