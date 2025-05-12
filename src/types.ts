@@ -18,7 +18,7 @@ export interface Property {
   pattern?: string;
   readOnly?: boolean;
   unique?: boolean;
-  type: "array" | "boolean" | "date" | "integer" | "number" | "object" | "string";
+  type: "array" | "boolean" | "date" | "integer" | "json" | "number" | "object" | "string";
   writeOnly?: boolean;
 }
 
@@ -28,9 +28,9 @@ export interface Column extends Property {
   dateOn?: "delete" | "insert" | "update";
   constraint?: string;
   format?: string;
+  fullText?: boolean;
   index?: string[];
   primaryKey?: boolean;
-  required?: boolean;
 }
 
 // Extra properties such as `array`, 'subType' and 'unique can only be defined externally
