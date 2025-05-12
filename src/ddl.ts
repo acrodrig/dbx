@@ -228,7 +228,7 @@ export class DDL {
     if (dbType === DB.Provider.POSTGRES && type === "JSON") type = "JSONB";
     if (dbType === DB.Provider.POSTGRES && autoIncrement) type = "SERIAL";
 
-    return `${pad}${name.padEnd(namePad)}${(type+length).padEnd(13)}${nullable}${as}${dv ? " DEFAULT " + dv : ""}${key}${gen}${comment},\n`;
+    return `${pad}${name.padEnd(namePad)}${(type + length).padEnd(13)}${nullable}${as}${dv ? " DEFAULT " + dv : ""}${key}${gen}${comment},\n`;
   }
 
   // Index generator
