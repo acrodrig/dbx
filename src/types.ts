@@ -30,6 +30,7 @@ export interface Column extends Property {
   format?: string;
   index?: string[];
   primaryKey?: boolean;
+  required?: boolean;
 }
 
 // Extra properties such as `array`, 'subType' and 'unique can only be defined externally
