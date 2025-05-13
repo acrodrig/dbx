@@ -2,13 +2,9 @@
 
 import { assertEquals, assertExists, assertNotEquals } from "@std/assert";
 import { delay } from "@std/async";
-import { hub } from "hub";
 import { DDL } from "../src/ddl.ts";
 import type { Schema } from "../src/types.ts";
 import { createTables, dbInit, getProvider } from "./helpers.ts";
-
-// deno-lint-ignore no-global-assign
-console = hub("*", "debug");
 
 // See https://github.com/denoland/deno_std/blob/main/testing/_diff_test.ts
 

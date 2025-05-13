@@ -1,6 +1,9 @@
 import { eTag } from "@std/http/etag";
+import { hub } from "hub";
 import type { Column, Constraint, Index, Relation, Schema } from "./types.ts";
 import DB from "./db.ts";
+
+const log = hub("dbx:ddl");
 
 const dataTypes = {
   array: "JSON",
@@ -82,6 +85,8 @@ export class DDL {
    * @returns a map of class names to schemas
    */
   static async generateSchemas(classFiles: Record<string, string>, base?: string, enhance?: boolean): Promise<Record<string, Schema>> {
+    log.debug({ method: "generateSchemas", classFiles, base, enhance });
+
     // If DDL has no generator, throw an error
     if (!DDL.generator) throw new Error("DDL.generator must be set to a function that generates schemas from class files");
 
@@ -189,12 +194,12 @@ export class DDL {
     return schema;
   }
 
-  static #defaultValue(column: Column, dbType: string) {
+  static #defaultValue(column: Column, provider: string) {
     const cd = column.default;
 
     // Automatically inserted/updated values
     if (column.dateOn === "insert") return "CURRENT_TIMESTAMP";
-    if (column.dateOn === "update") return "CURRENT_TIMESTAMP" + ((dbType !== DB.Provider.MYSQL) ? "" : " ON UPDATE CURRENT_TIMESTAMP");
+    if (column.dateOn === "update") return "CURRENT_TIMESTAMP" + ((provider !== DB.Provider.MYSQL) ? "" : " ON UPDATE CURRENT_TIMESTAMP");
 
     // Generated fields should NOT have a default value
     if (column.as) return undefined;
@@ -208,31 +213,37 @@ export class DDL {
   }
 
   // Column generator
-  static createColumn(dbType: string, name: string, column: Column, required: boolean, namePad: number, padWidth = DDL.padWidth, defaultWidth = DDL.defaultWidth): string {
+  static createColumn(provider: string, name: string, column: Column, required: boolean, namePad: number, padWidth = DDL.padWidth, defaultWidth = DDL.defaultWidth): string {
+    log.debug({ method: "createColumn", provider, name, column, required, namePad, padWidth, defaultWidth });
+
     const pad = "".padEnd(padWidth);
     let type = dataTypes[column.type as keyof typeof dataTypes];
-    if (dbType === DB.Provider.MYSQL && column.maxLength! > this.textWidth) type = "TEXT";
+    if (!type) throw new Error("Unknown type '" + column.type + "' for column '" + name + "' (known types are " + Object.keys(dataTypes).join(", ") + ")");
+
+    if (provider === DB.Provider.MYSQL && column.maxLength! > this.textWidth) type = "TEXT";
     const primaryKey = column.primaryKey !== undefined;
     const autoIncrement = primaryKey && column.type === "integer";
     const length = column.maxLength! < this.textWidth || type.endsWith("CHAR") ? "(" + (column.maxLength ?? defaultWidth) + ")" : "";
     const nullable = primaryKey || required ? " NOT NULL" : "         ";
-    const gen = autoIncrement ? serialType[dbType as keyof typeof serialType] : "";
-    const expr = column.as && (typeof column.as === "string" ? DB._sqlFilter(column.as) : column.as[dbType]);
+    const gen = autoIncrement ? serialType[provider as keyof typeof serialType] : "";
+    const expr = column.as && (typeof column.as === "string" ? DB._sqlFilter(column.as) : column.as[provider]);
     const as = expr ? " GENERATED ALWAYS AS (" + expr + ") STORED" : "";
-    const dv = this.#defaultValue(column, dbType);
+    const dv = this.#defaultValue(column, provider);
     // const def = Object.hasOwn(column, "default") || Object.hasOwn(column, "dateOn") ? " DEFAULT " + this.#defaultValue(column, dbType) : "";
     const key = primaryKey ? " PRIMARY KEY" : (column.unique !== undefined ? " UNIQUE" : "");
-    const comment = (dbType === DB.Provider.MYSQL) && column.description ? " COMMENT '" + column.description.replace(/'/g, "''") + "'" : "";
+    const comment = (provider === DB.Provider.MYSQL) && column.description ? " COMMENT '" + column.description.replace(/'/g, "''") + "'" : "";
 
     // Correct Postgres JSON type
-    if (dbType === DB.Provider.POSTGRES && type === "JSON") type = "JSONB";
-    if (dbType === DB.Provider.POSTGRES && autoIncrement) type = "SERIAL";
+    if (provider === DB.Provider.POSTGRES && type === "JSON") type = "JSONB";
+    if (provider === DB.Provider.POSTGRES && autoIncrement) type = "SERIAL";
 
     return `${pad}${name.padEnd(namePad)}${(type + length).padEnd(13)}${nullable}${as}${dv ? " DEFAULT " + dv : ""}${key}${gen}${comment},\n`;
   }
 
   // Index generator
-  static createIndex(dbType: string, index: Index, padWidth = 4, table: string): string {
+  static createIndex(provider: string, index: Index, padWidth = 4, table: string): string {
+    log.debug({ method: "createIndex", provider, index, padWidth, table });
+
     const pad = "".padEnd(padWidth);
     const columns = [...index.properties] as string[];
     const name = columns.join("_");
@@ -241,25 +252,27 @@ export class DDL {
     // TODO: multivalued indexes only supported on MYSQL for now, Postgres and SQLite will use the entire
     const subType = index.subType ?? "CHAR(32)";
     if (index.array !== undefined) {
-      columns[index.array] = "(CAST(" + columns[index.array] + " AS " + subType + (dbType === DB.Provider.MYSQL ? " ARRAY" : "") + "))";
+      columns[index.array] = "(CAST(" + columns[index.array] + " AS " + subType + (provider === DB.Provider.MYSQL ? " ARRAY" : "") + "))";
     }
 
     const unique = index.unique ? "UNIQUE " : "";
     return `${pad}CREATE ${unique}INDEX ${table}_${name} ON ${table} (${columns.join(",")});\n`;
   }
 
-  static createFullTextIndex(dbType: string, columns: string[], padWidth = 4, table: string, name = "fulltext"): string {
+  static createFullTextIndex(provider: string, columns: string[], padWidth = 4, table: string, name = "fulltext"): string {
+    log.debug({ method: "createFullTextIndex", provider, columns, padWidth, table, name });
+
     const pad = "".padEnd(padWidth);
 
     const wrapper = (columns: string[], s = ",", w = false) => columns.map((c) => w ? "COALESCE(" + c + ",'')" : c).join(s);
-    if (dbType === DB.Provider.MYSQL) return `${pad}CREATE FULLTEXT INDEX ${table}_${name} ON ${table} (${wrapper(columns, ",")});\n`;
-    if (dbType === DB.Provider.POSTGRES) return `${pad}CREATE INDEX ${table}_${name} ON ${table} USING GIN (TO_TSVECTOR('english', ${wrapper(columns, "||' '||", true)}));`;
+    if (provider === DB.Provider.MYSQL) return `${pad}CREATE FULLTEXT INDEX ${table}_${name} ON ${table} (${wrapper(columns, ",")});\n`;
+    if (provider === DB.Provider.POSTGRES) return `${pad}CREATE INDEX ${table}_${name} ON ${table} USING GIN (TO_TSVECTOR('english', ${wrapper(columns, "||' '||", true)}));`;
 
     return "";
   }
 
   // Relation generator
-  static createRelation(_dbType: string, parent: string, name: string, relation: Relation, padWidth = 4): string {
+  static createRelation(_provider: string, parent: string, name: string, relation: Relation, padWidth = 4): string {
     const pad = "".padEnd(padWidth);
     const da = relation.delete ? " ON DELETE " + relation.delete?.toUpperCase().replace(/-/g, " ") : "";
     const ua = relation.update ? " ON DELETE " + relation.update?.toUpperCase().replace(/-/g, " ") : "";
@@ -268,7 +281,9 @@ export class DDL {
   }
 
   // Constraint independent generator
-  static createColumnConstraint(dbType: string, parent: string, name: string, column: Column, padWidth = 4): string {
+  static createColumnConstraint(provider: string, parent: string, name: string, column: Column, padWidth = 4): string {
+    log.debug({ method: "createColumnConstraint", provider, parent, name, column, padWidth });
+
     const pad = "".padEnd(padWidth);
     const value = (v: number | string) => typeof v === "string" ? "'" + v + "'" : v;
     let expr = "";
@@ -276,35 +291,39 @@ export class DDL {
     else if (column.maximum) expr += `${name} >= ${value(column.maximum)}`;
     else if (column.minimum) expr += `${name} >= ${value(column.minimum)}`;
     name = parent + "_" + name;
-    return expr ? `${pad}${name && dbType !== "sqlite" ? "CONSTRAINT " + name + " " : ""}CHECK (${expr}),\n` : "";
+    return expr ? `${pad}${name && provider !== "sqlite" ? "CONSTRAINT " + name + " " : ""}CHECK (${expr}),\n` : "";
   }
 
   // Constraint independent generator
-  static createIndependentConstraint(dbType: string, parent: string, constraint: Constraint, padWidth = 4): string {
+  static createIndependentConstraint(provider: string, parent: string, constraint: Constraint, padWidth = 4): string {
+    log.debug({ method: "createIndependentConstraint", provider, parent, constraint, padWidth });
+
     const pad = "".padEnd(padWidth), simple = typeof constraint === "string";
     const name = simple ? undefined : (parent + "_" + constraint.name).toLowerCase();
     const expr = simple ? constraint : constraint.check;
-    return `${pad}${name && dbType !== "sqlite" ? "CONSTRAINT " + name + " " : ""}CHECK (${expr}),\n`;
+    return `${pad}${name && provider !== "sqlite" ? "CONSTRAINT " + name + " " : ""}CHECK (${expr}),\n`;
   }
 
   // Uses the most standard MySQL syntax, and then it is fixed afterward
-  static createTable(schema: Schema, dbType: DB.Provider, nameOverride?: string): string {
+  static createTable(schema: Schema, provider: DB.Provider, nameOverride?: string): string {
+    log.debug({ method: "createTable", schema, provider, nameOverride });
+
     // Get name padding
     const namePad = Math.max(...Object.keys(schema.properties).map((n) => n.length || 0)) + 1;
 
     // Check with if type is SQLite since it is the most restrictive
-    const sqlite = dbType === DB.Provider.SQLITE;
+    const sqlite = provider === DB.Provider.SQLITE;
 
     // Create SQL
     const table = nameOverride ?? schema.table! ?? schema.type?.toLowerCase();
     const required = (n: string) => schema.required?.includes(n) || false;
-    const columns = Object.entries(schema.properties).map(([n, c]) => this.createColumn(dbType, n, c!, required(n), namePad)).join("");
-    const relations = !sqlite && Object.entries(schema.relations || []).map(([n, r]) => this.createRelation(dbType, table, n, r!)).join("") || "";
+    const columns = Object.entries(schema.properties).map(([n, c]) => this.createColumn(provider, n, c!, required(n), namePad)).join("");
+    const relations = !sqlite && Object.entries(schema.relations || []).map(([n, r]) => this.createRelation(provider, table, n, r!)).join("") || "";
 
     // Create constraints (and sort lines for consistency)
-    const filter = (c: Constraint) => !c.provider || c.provider === dbType;
-    const columnConstraints = Object.entries(schema.properties || {}).map(([n, c]) => this.createColumnConstraint(dbType, table, n, c));
-    const independentConstraints = (schema.constraints || []).filter(filter).map((c) => this.createIndependentConstraint(dbType, table, c));
+    const filter = (c: Constraint) => !c.provider || c.provider === provider;
+    const columnConstraints = Object.entries(schema.properties || {}).map(([n, c]) => this.createColumnConstraint(provider, table, n, c));
+    const independentConstraints = (schema.constraints || []).filter(filter).map((c) => this.createIndependentConstraint(provider, table, c));
     const constraints = [...columnConstraints, ...independentConstraints].sort().join("");
 
     // Create sql
@@ -318,13 +337,13 @@ export class DDL {
       const array = types.includes("array") ? types.indexOf("array") : undefined;
       indices!.push({ properties: c.index!, array });
     });
-    if (indices.length) sql += "\n" + indices?.map((i) => this.createIndex(dbType, i, 0, table)).sort().join("");
+    if (indices.length) sql += "\n" + indices?.map((i) => this.createIndex(provider, i, 0, table)).sort().join("");
 
     // Full text index
-    if (schema.fullText?.length) sql += this.createFullTextIndex(dbType, schema.fullText, 0, table);
+    if (schema.fullText?.length) sql += this.createFullTextIndex(provider, schema.fullText, 0, table);
 
     const fixDanglingComma = (sql: string) => sql.replace(/,\n\)/, "\n);");
-    if (dbType === DB.Provider.POSTGRES) sql = this.#postgres(sql);
+    if (provider === DB.Provider.POSTGRES) sql = this.#postgres(sql);
     sql = fixDanglingComma(sql);
 
     return sql;

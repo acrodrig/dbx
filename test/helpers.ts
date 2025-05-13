@@ -5,6 +5,8 @@ import type { Schema } from "../src/types.ts";
 const PROVIDER = Deno.env.get("TEST_PROVIDER") ?? Deno.args[0];
 if (!PROVIDER) console.warn("\n⚠️  Assuming SQLITE provider. You can use 'TEST_PROVIDER=<provider>' or '-- <provider>' (mysql, postgres, sqlite)\n");
 
+// Make sure loggers
+
 export async function dbInit(type: string, schemas?: Schema[]) {
   // If it is SQLite, it will do an in-memory DB
   const hostname = "127.0.0.1";
