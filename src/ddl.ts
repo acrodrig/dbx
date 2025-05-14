@@ -41,6 +41,15 @@ export class DDL {
   static textWidth = 2048;
 
   /**
+   * Small utility to validate parameters
+   */
+  static #ensureProvider(provider: string) {
+    const values: string[] = Object.values(DB.Provider);
+    const message = "Unknown provider '" + provider + "' - should be one of '" + values.join(" | ") + "'";
+    if (!values.includes(provider)) throw new Error(message);
+  }
+
+  /**
    * Generator function that creates a map of schemas from class files
    * @param classFiles - a map of class names to file paths
    * @param base - the base directory where the files are located
@@ -215,6 +224,7 @@ export class DDL {
   // Column generator
   static createColumn(provider: string, name: string, column: Column, required: boolean, namePad: number, padWidth = DDL.padWidth, defaultWidth = DDL.defaultWidth): string {
     log.debug({ method: "createColumn", provider, name, column, required, namePad, padWidth, defaultWidth });
+    this.#ensureProvider(provider);
 
     const pad = "".padEnd(padWidth);
     let type = dataTypes[column.type as keyof typeof dataTypes];
@@ -225,7 +235,7 @@ export class DDL {
     const autoIncrement = primaryKey && column.type === "integer";
     const length = column.maxLength! < this.textWidth || type.endsWith("CHAR") ? "(" + (column.maxLength ?? defaultWidth) + ")" : "";
     const nullable = primaryKey || required ? " NOT NULL" : "         ";
-    const gen = autoIncrement ? serialType[provider as keyof typeof serialType] : "";
+    const gen = autoIncrement ? (serialType[provider as keyof typeof serialType] ?? "UNKNOWN") : "";
     const expr = column.as && (typeof column.as === "string" ? DB._sqlFilter(column.as) : column.as[provider]);
     const as = expr ? " GENERATED ALWAYS AS (" + expr + ") STORED" : "";
     const dv = this.#defaultValue(column, provider);
@@ -243,6 +253,7 @@ export class DDL {
   // Index generator
   static createIndex(provider: string, index: Index, padWidth = 4, table: string): string {
     log.debug({ method: "createIndex", provider, index, padWidth, table });
+    this.#ensureProvider(provider);
 
     const pad = "".padEnd(padWidth);
     const columns = [...index.properties] as string[];
@@ -261,6 +272,7 @@ export class DDL {
 
   static createFullTextIndex(provider: string, columns: string[], padWidth = 4, table: string, name = "fulltext"): string {
     log.debug({ method: "createFullTextIndex", provider, columns, padWidth, table, name });
+    this.#ensureProvider(provider);
 
     const pad = "".padEnd(padWidth);
 
@@ -272,7 +284,10 @@ export class DDL {
   }
 
   // Relation generator
-  static createRelation(_provider: string, parent: string, name: string, relation: Relation, padWidth = 4): string {
+  static createRelation(provider: string, parent: string, name: string, relation: Relation, padWidth = 4): string {
+    log.debug({ method: "createRelation", provider, parent, name, relation, padWidth });
+    this.#ensureProvider(provider);
+
     const pad = "".padEnd(padWidth);
     const da = relation.delete ? " ON DELETE " + relation.delete?.toUpperCase().replace(/-/g, " ") : "";
     const ua = relation.update ? " ON DELETE " + relation.update?.toUpperCase().replace(/-/g, " ") : "";
@@ -283,6 +298,7 @@ export class DDL {
   // Constraint independent generator
   static createColumnConstraint(provider: string, parent: string, name: string, column: Column, padWidth = 4): string {
     log.debug({ method: "createColumnConstraint", provider, parent, name, column, padWidth });
+    this.#ensureProvider(provider);
 
     const pad = "".padEnd(padWidth);
     const value = (v: number | string) => typeof v === "string" ? "'" + v + "'" : v;
@@ -297,6 +313,7 @@ export class DDL {
   // Constraint independent generator
   static createIndependentConstraint(provider: string, parent: string, constraint: Constraint, padWidth = 4): string {
     log.debug({ method: "createIndependentConstraint", provider, parent, constraint, padWidth });
+    this.#ensureProvider(provider);
 
     const pad = "".padEnd(padWidth), simple = typeof constraint === "string";
     const name = simple ? undefined : (parent + "_" + constraint.name).toLowerCase();
@@ -307,6 +324,7 @@ export class DDL {
   // Uses the most standard MySQL syntax, and then it is fixed afterward
   static createTable(schema: Schema, provider: DB.Provider, nameOverride?: string): string {
     log.debug({ method: "createTable", schema, provider, nameOverride });
+    this.#ensureProvider(provider);
 
     // Get name padding
     const namePad = Math.max(...Object.keys(schema.properties).map((n) => n.length || 0)) + 1;
