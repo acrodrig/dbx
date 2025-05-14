@@ -1,5 +1,6 @@
 import { DB } from "../src/db.ts";
 import { DDL } from "../src/ddl.ts";
+import { Schemas } from "../src/schemas.ts";
 import type { Schema } from "../src/types.ts";
 
 const PROVIDER = Deno.env.get("TEST_PROVIDER") ?? Deno.args[0];
@@ -50,3 +51,12 @@ export const getProvider = function (): DB.Provider {
   }
   return provider || DB.Provider.SQLITE;
 };
+
+// Generator function is declared here so that it does not go into the published module
+export async function generator(classFiles: Record<string, string>, base?: string) {
+  const TJS = (await import("npm:typescript-json-schema@0.65.1")).default;
+  const program = TJS.getProgramFromFiles(Object.values(classFiles), Schemas.TS_OPTIONS, base);
+  // deno-lint-ignore no-explicit-any
+  const entries = Object.keys(classFiles).map((c) => [c, TJS.generateSchema(program, c, Schemas.TJS_OPTIONS as any)]);
+  return Object.fromEntries(entries);
+}
