@@ -1,19 +1,9 @@
 import { eTag } from "@std/http/etag";
 import { hub } from "hub";
-import { DDL } from "./ddl.ts";
+import { BaseSchema } from "./ddl.ts";
 import type { Schema } from "./types.ts";
 
 const log = hub("dbx:schema");
-
-const _BaseSchema: Schema = {
-  table: "_BaseSchema",
-  properties: {
-    id: { type: "integer", primaryKey: true, description: "Unique identifier, auto-generated. It's the primary key." },
-    etag: { type: "string", maxLength: 1024, description: "Possible ETag for all resources that are external. Allows for better synch-ing." },
-    inserted: { type: "date", dateOn: "insert", index: ["inserted"], description: "Timestamp when current record is inserted" },
-    updated: { type: "date", dateOn: "update", index: ["updated"], description: "Timestamp when current record is updated" },
-  },
-};
 
 /**
  * Generator function that creates a map of schemas from class files
@@ -37,8 +27,9 @@ const _BaseSchema: Schema = {
 type Generator = (classFiles: Record<string, string>, base?: string, extensions?: string[]) => Promise<Record<string, Schema>>;
 
 export class Schemas {
+  static EXTENSIONS = ["as", "constraint", "dateOn", "fullText", "index", "primaryKey", "relations", "unique", "table"];
   static TS_OPTIONS = { lib: ["es2022"], module: "es2022", target: "es2022" };
-  static TJS_OPTIONS = { required: true, ignoreErrors: true, defaultNumberType: "integer", validationKeywords: DDL.EXTENSIONS };
+  static TJS_OPTIONS = { required: true, ignoreErrors: true, defaultNumberType: "integer", validationKeywords: Schemas.EXTENSIONS };
 
   /**
    * When using tools such as [TJS](https://github.com/YousefED/typescript-json-schema) to
@@ -106,6 +97,7 @@ export class Schemas {
    * Generate schemas from class files
    *
    * @param classFiles - a map of class names to file paths
+   * @param generator - generate AST tree
    * @param base - the base directory where the files are located, needed for relative URLs in schema
    * @param enhance - if true schemas will be enhanced with standard properties
    * @returns a map of class names to schemas
@@ -122,7 +114,7 @@ export class Schemas {
       const etag = await eTag(await Deno.stat(f));
       const file = f.startsWith("/") ? f : "./" + f;
       schemas[c] = Schemas.#clean(schemas[c], c, undefined, "file://" + file, etag);
-      if (enhance) schemas[c] = Schemas.enhanceSchema(schemas[c]);
+      if (enhance) schemas[c] = Schemas.enhance(schemas[c]);
     }
 
     // Return schema map (from class/type to schema)
@@ -165,12 +157,12 @@ export class Schemas {
   }
 
   // Enhance schema with standard properties
-  static enhanceSchema(schema: Schema, selected: string[] = ["id", "inserted", "updated"]): Schema {
+  static enhance(schema: Schema, selected: string[] = ["id", "inserted", "updated"]): Schema {
     // Select properties that match the selected columns and add them to the schema
     if (!schema.properties) schema.properties = {};
     for (const name of selected) {
       if (schema.properties[name]) continue;
-      schema.properties[name] = _BaseSchema.properties[name];
+      schema.properties[name] = BaseSchema.properties[name];
     }
     return schema;
   }

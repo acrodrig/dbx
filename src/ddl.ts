@@ -20,6 +20,16 @@ const serialType = {
   postgres: "",
 };
 
+export const BaseSchema: Schema = {
+  table: "_BaseSchema",
+  properties: {
+    id: { type: "integer", primaryKey: true, description: "Unique identifier, auto-generated. It's the primary key." },
+    etag: { type: "string", maxLength: 1024, description: "Possible ETag for all resources that are external. Allows for better synch-ing." },
+    inserted: { type: "date", dateOn: "insert", index: ["inserted"], description: "Timestamp when current record is inserted" },
+    updated: { type: "date", dateOn: "update", index: ["updated"], description: "Timestamp when current record is updated" },
+  },
+};
+
 export class DDL {
   static EXTENSIONS = ["as", "constraint", "dateOn", "fullText", "index", "primaryKey", "relations", "unique", "table"];
 
@@ -52,6 +62,17 @@ export class DDL {
     if (typeof cd === "object") return "('" + JSON.stringify(cd) + "')";
 
     return cd;
+  }
+
+  // Enhance schema with standard properties
+  static enhanceSchema(schema: Schema, selected: string[] = ["id", "inserted", "updated"]): Schema {
+    // Select properties that match the selected columns and add them to the schema
+    if (!schema.properties) schema.properties = {};
+    for (const name of selected) {
+      if (schema.properties[name]) continue;
+      schema.properties[name] = BaseSchema.properties[name];
+    }
+    return schema;
   }
 
   // Column generator
