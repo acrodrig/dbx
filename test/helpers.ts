@@ -1,7 +1,12 @@
+import { hub } from "jsr:@acr/hub@^0.5";
 import { DB } from "../src/db.ts";
 import { DDL } from "../src/ddl.ts";
 import { Schemas } from "../src/schemas.ts";
 import type { Schema } from "../src/types.ts";
+
+// deno-lint-ignore no-global-assign
+console = hub("*");
+console.trace = () => {};
 
 const PROVIDER = Deno.env.get("TEST_PROVIDER") ?? Deno.args[0];
 if (!PROVIDER) console.warn("\n⚠️  Assuming SQLITE provider. You can use 'TEST_PROVIDER=<provider>' or '-- <provider>' (mysql, postgres, sqlite)\n");

@@ -16,8 +16,7 @@
     "@std/collections": "jsr:@std/collections@^1",
     "@std/fmt": "jsr:@std/fmt@^1",
     "@std/fs": "jsr:@std/fs@^1",
-    "@std/http": "jsr:@std/http@^1",
-    "hub": "jsr:@acr/hub@^0.4.0"
+    "@std/http": "jsr:@std/http@^1"
   },
   "publish": {
     "include": [

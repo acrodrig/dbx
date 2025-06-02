@@ -1,8 +1,5 @@
-import { hub } from "hub";
 import type { Column, Constraint, Index, Relation, Schema } from "./types.ts";
 import DB from "./db.ts";
-
-const log = hub("dbx:ddl");
 
 const dataTypes = {
   array: "JSON",
@@ -77,7 +74,7 @@ export class DDL {
 
   // Column generator
   static createColumn(provider: string, name: string, column: Column, required: boolean, namePad: number, padWidth = DDL.padWidth, defaultWidth = DDL.defaultWidth): string {
-    log.debug({ method: "createColumn", provider, name, column, required, namePad, padWidth, defaultWidth });
+    console.debug({ method: "createColumn", provider, name, column, required, namePad, padWidth, defaultWidth });
     this.#ensureProvider(provider);
 
     const pad = "".padEnd(padWidth);
@@ -106,7 +103,7 @@ export class DDL {
 
   // Index generator
   static createIndex(provider: string, index: Index, padWidth = 4, table: string): string {
-    log.debug({ method: "createIndex", provider, index, padWidth, table });
+    console.debug({ method: "createIndex", provider, index, padWidth, table });
     this.#ensureProvider(provider);
 
     const pad = "".padEnd(padWidth);
@@ -125,7 +122,7 @@ export class DDL {
   }
 
   static createFullTextIndex(provider: string, columns: string[], padWidth = 4, table: string, name = "fulltext"): string {
-    log.debug({ method: "createFullTextIndex", provider, columns, padWidth, table, name });
+    console.debug({ method: "createFullTextIndex", provider, columns, padWidth, table, name });
     this.#ensureProvider(provider);
 
     const pad = "".padEnd(padWidth);
@@ -139,7 +136,7 @@ export class DDL {
 
   // Relation generator
   static createRelation(provider: string, parent: string, name: string, relation: Relation, padWidth = 4): string {
-    log.debug({ method: "createRelation", provider, parent, name, relation, padWidth });
+    console.debug({ method: "createRelation", provider, parent, name, relation, padWidth });
     this.#ensureProvider(provider);
 
     const pad = "".padEnd(padWidth);
@@ -151,7 +148,7 @@ export class DDL {
 
   // Constraint independent generator
   static createColumnConstraint(provider: string, parent: string, name: string, column: Column, padWidth = 4): string {
-    log.debug({ method: "createColumnConstraint", provider, parent, name, column, padWidth });
+    console.debug({ method: "createColumnConstraint", provider, parent, name, column, padWidth });
     this.#ensureProvider(provider);
 
     const pad = "".padEnd(padWidth);
@@ -166,7 +163,7 @@ export class DDL {
 
   // Constraint independent generator
   static createIndependentConstraint(provider: string, parent: string, constraint: Constraint, padWidth = 4): string {
-    log.debug({ method: "createIndependentConstraint", provider, parent, constraint, padWidth });
+    console.debug({ method: "createIndependentConstraint", provider, parent, constraint, padWidth });
     this.#ensureProvider(provider);
 
     const pad = "".padEnd(padWidth), simple = typeof constraint === "string";
@@ -177,7 +174,7 @@ export class DDL {
 
   // Uses the most standard MySQL syntax, and then it is fixed afterward
   static createTable(schema: Schema, provider: DB.Provider, nameOverride?: string, safe?: boolean): string {
-    log.debug({ method: "createTable", schema, provider, nameOverride });
+    console.debug({ method: "createTable", schema, provider, nameOverride });
     this.#ensureProvider(provider);
 
     // Get name padding

@@ -1,9 +1,6 @@
 import { eTag } from "@std/http/etag";
-import { hub } from "hub";
 import { BaseSchema } from "./ddl.ts";
 import type { Schema } from "./types.ts";
-
-const log = hub("dbx:schema");
 
 /**
  * Generator function that creates a map of schemas from class files
@@ -103,7 +100,7 @@ export class Schemas {
    * @returns a map of class names to schemas
    */
   static async generate(classFiles: Record<string, string>, generator: Generator, base?: string, enhance?: boolean): Promise<Record<string, Schema>> {
-    log.debug({ method: "generateSchemas", classFiles, base, enhance });
+    console.debug({ method: "generateSchemas", classFiles, base, enhance });
 
     // If Generator has no generator, throw an error
     if (!generator) throw new Error("Generator must be set to a function that generates schemas from class files");

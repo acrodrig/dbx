@@ -1,11 +1,10 @@
 import { blue, bold, white } from "@std/fmt/colors";
-import { hub } from "hub";
 import { connect } from "./client.ts";
 import { DDL } from "./ddl.ts";
 import type { Class, Client, ClientConfig, Identifiable, Parameter, Row, Schema } from "./types.ts";
 import { Repository } from "./repository.ts";
 
-const log = hub("dbx"), sqlLog = hub("dbx:sql");
+const logSql = Deno.env.has("SQL");
 
 // See https://stackoverflow.com/questions/49285864/is-there-a-valueof-similar-to-keyof-in-typescript
 type Values<T> = T[keyof T];
@@ -77,7 +76,7 @@ export class DB {
     } catch (ex) {
       const message = "❌ Could not connect to DB '" + url + "', review DB configuration";
       if (!safe) throw new Error(message);
-      else log.error(message, ex);
+      else console.error(message, ex);
     }
   }
 
@@ -105,12 +104,12 @@ export class DB {
   }
 
   static _logSql(sql: string, parameters: Parameter[], rows: number, start: number) {
-    if (sqlLog.level !== "debug") return;
+    if (!logSql) return;
     const time = "[" + rows + "row" + (rows === 1 ? "" : "s") + " in " + (Date.now() - start) + "ms]";
     let i = 0;
     sql = sql.replace(/\?/g, () => blue(String(i < parameters.length ? parameters[i++] : "⚠️")));
     sql = sql.replace(RESERVED, (w) => bold(w));
-    sqlLog.debug(sql.trim() + "  " + bold(white(time)));
+    console.debug(sql.trim() + "  " + bold(white(time)));
   }
 
   static async query(sql: string, parameters?: Parameter[] | { [key: string]: Parameter }): Promise<Row[]> {
@@ -121,7 +120,7 @@ export class DB {
       parameters = arrayParameters;
     }
 
-    log.debug({ method: "query", sql: clean(sql), parameters });
+    console.debug({ method: "query", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
     try {
@@ -131,8 +130,8 @@ export class DB {
       this._logSql(sql, parameters ?? [], result.length ?? 0, start);
       return result;
     } catch (ex) {
-      log.error({ method: "query", sql: clean(sql), parameters, message: (ex as Error).message });
-      log.trace(ex);
+      console.error({ method: "query", sql: clean(sql), parameters, message: (ex as Error).message });
+      console.trace(ex);
       throw ex;
     }
   }
@@ -145,7 +144,7 @@ export class DB {
       parameters = arrayParameters;
     }
 
-    log.debug({ method: "execute", sql: clean(sql), parameters });
+    console.debug({ method: "execute", sql: clean(sql), parameters });
 
     // At this point SQL contains only `?` and the parameters is an array
     try {
@@ -155,8 +154,8 @@ export class DB {
       this._logSql(sql, parameters ?? [], result.affectedRows ?? 0, start);
       return result;
     } catch (ex) {
-      log.error({ method: "execute", sql: clean(sql), parameters, message: (ex as Error).message });
-      log.trace(ex);
+      console.error({ method: "execute", sql: clean(sql), parameters, message: (ex as Error).message });
+      console.trace(ex);
       throw ex;
     }
   }

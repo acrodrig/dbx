@@ -1,16 +1,10 @@
 import { assert } from "@std/assert";
-import { hub } from "hub";
 import { DB } from "./db.ts";
 import type { Class, Condition, Filter, Identifiable, Order, Primitive, Schema, Where } from "./types.ts";
 
-const log = hub("dbx");
-
 // Syntactic Sugar to allow for forced debug
-export function forcedDebug(debug: boolean | undefined, ...args: unknown[]): void {
-  const level = log.level;
-  if (debug) log.level = "debug";
-  log.debug(args);
-  if (debug) log.level = level;
+export function forcedDebug(bump: boolean | undefined, ...args: unknown[]): void {
+  return bump ? console.info(args) : console.debug(args);
 }
 
 // Syntactic Sugar
@@ -194,7 +188,7 @@ export class Repository<T extends Identifiable> extends EventTarget {
     forcedDebug(debug, { method: "insert", sql: clean(sql), parameters });
     this.dispatchEvent(new CustomEvent(Hook.BEFORE_INSERT, { detail: object }));
     const result = await DB.execute(sql, parameters as Primitive[]);
-    if (!result.lastInsertId) log.warn({ method: "insert", sql: clean(sql), warning: "Insert did produce a last inserted ID" });
+    if (!result.lastInsertId) console.warn({ method: "insert", sql: clean(sql), warning: "Insert did produce a last inserted ID" });
     if (result.lastInsertId) object.id = result.lastInsertId;
     this.dispatchEvent(new CustomEvent(Hook.AFTER_INSERT, { detail: object }));
     return object;
@@ -216,8 +210,8 @@ export class Repository<T extends Identifiable> extends EventTarget {
     const result = await DB.execute(sql, parameters as Primitive[]);
     if (result.lastInsertId) object.id = result.lastInsertId;
     this.dispatchEvent(new CustomEvent(Hook.AFTER_UPDATE, { detail: object }));
-    if (result.affectedRows === 0) log.warn({ method: "update", sql: clean(sql), warning: "Update had no affected rows" });
-    if (result.affectedRows! > 1) log.warn({ method: "update", sql: clean(sql), warning: "Update had more than one affected rows" });
+    if (result.affectedRows === 0) console.warn({ method: "update", sql: clean(sql), warning: "Update had no affected rows" });
+    if (result.affectedRows! > 1) console.warn({ method: "update", sql: clean(sql), warning: "Update had more than one affected rows" });
     return result.affectedRows === 1 ? object as T : undefined;
   }
 
