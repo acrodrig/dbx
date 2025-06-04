@@ -39,7 +39,7 @@ export class Schemas {
    * @param $id - the URL of the schema file
    * @param etag - the etag of the source file
    */
-  static #clean(schema: Schema, type?: string, table?: string, $id?: string, etag?: string): Schema {
+  static #clean(schema: Schema, type?: string, table?: string, $id?: string, etag?: string, timestamp = true): Schema {
     if (type) schema.type = type;
     if (table) schema.table = table;
 
@@ -47,7 +47,7 @@ export class Schemas {
     if (!schema.table) schema.table = type?.toLowerCase() ?? schema.type?.toLowerCase();
 
     // Set $id to the file URL of the schema and the date time it was created (as the hash)
-    if ($id) schema.$id = $id + ($id.includes("#") ? "" : "#" + new Date().toISOString().substring(0, 19));
+    if ($id && timestamp) schema.$id = $id + ($id.includes("#") ? "" : "#" + new Date().toISOString().substring(0, 19));
 
     // Generate an etag (based on the file etag)
     if (etag) schema.etag = etag;
@@ -99,7 +99,7 @@ export class Schemas {
    * @param enhance - if true schemas will be enhanced with standard properties
    * @returns a map of class names to schemas
    */
-  static async generate(classFiles: Record<string, string>, generator: Generator, base?: string, enhance?: boolean): Promise<Record<string, Schema>> {
+  static async generate(classFiles: Record<string, string>, generator: Generator, base?: string, enhance?: boolean, timestamp = true): Promise<Record<string, Schema>> {
     console.debug({ method: "generateSchemas", classFiles, base, enhance });
 
     // If Generator has no generator, throw an error
@@ -110,7 +110,7 @@ export class Schemas {
     for (const [c, f] of Object.entries(classFiles)) {
       const etag = await eTag(await Deno.stat(f));
       const file = f.startsWith("/") ? f : "./" + f;
-      schemas[c] = Schemas.#clean(schemas[c], c, undefined, "file://" + file, etag);
+      schemas[c] = Schemas.#clean(schemas[c], c, undefined, "file://" + file, etag, timestamp);
       if (enhance) schemas[c] = Schemas.enhance(schemas[c]);
     }
 

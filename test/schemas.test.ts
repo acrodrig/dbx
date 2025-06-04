@@ -43,9 +43,9 @@ Deno.test("Schema Generation", async function () {
   await delay(1000 - (new Date()).getMilliseconds());
 
   // Generate two schemas in a row, they should be identical
-  const first = await Schemas.generate(classFiles, generator, BASE, true);
+  const first = await Schemas.generate(classFiles, generator, BASE, true, false);
   assertExists(first);
-  const second = await Schemas.generate(classFiles, generator, BASE, true);
+  const second = await Schemas.generate(classFiles, generator, BASE, true, false);
   assertNotEquals(first, second);
   assertEquals(JSON.stringify(first), JSON.stringify(second));
 });
